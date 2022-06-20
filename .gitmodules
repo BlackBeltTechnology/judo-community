@@ -1,0 +1,12 @@
+[submodule "judo-meta-jsl"]
+	path = judo-meta-jsl
+	url = git@github.com:BlackBeltTechnology/judo-meta-jsl.git
+[submodule "judo-tatami-jsl"]
+	path = judo-tatami-jsl
+	url = git@github.com:BlackBeltTechnology/judo-tatami-jsl.git
+[submodule "judo-runtime-core"]
+	path = judo-runtime-core
+	url = git@github.com:BlackBeltTechnology/judo-runtime-core.git
+[submodule "judo-runtime-core-jsl"]
+	path = judo-runtime-core-jsl
+	url = git@github.com:BlackBeltTechnology/judo-runtime-core-jsl.git
