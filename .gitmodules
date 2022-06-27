@@ -1,12 +1,76 @@
 [submodule "judo-meta-jsl"]
 	path = judo-meta-jsl
 	url = git@github.com:BlackBeltTechnology/judo-meta-jsl.git
+	branch = develop
 [submodule "judo-tatami-jsl"]
 	path = judo-tatami-jsl
 	url = git@github.com:BlackBeltTechnology/judo-tatami-jsl.git
+	branch = develop
 [submodule "judo-runtime-core"]
 	path = judo-runtime-core
 	url = git@github.com:BlackBeltTechnology/judo-runtime-core.git
+	branch = develop
 [submodule "judo-runtime-core-jsl"]
 	path = judo-runtime-core-jsl
 	url = git@github.com:BlackBeltTechnology/judo-runtime-core-jsl.git
+	branch = develop
+[submodule "judo-meta-psm"]
+	path = judo-meta-psm
+	url = https://github.com/BlackBeltTechnology/judo-meta-psm
+	branch = develop
+[submodule "judo-meta-asm"]
+	path = judo-meta-asm
+	url = https://github.com/BlackBeltTechnology/judo-meta-asm
+	branch = develop
+[submodule "judo-meta-expression"]
+	path = judo-meta-expression
+	url = https://github.com/BlackBeltTechnology/judo-meta-expression
+	branch = develop
+[submodule "judo-meta-jql"]
+	path = judo-meta-jql
+	url = https://github.com/BlackBeltTechnology/judo-meta-psm-jql
+	branch = develop
+[submodule "judo-meta-measure"]
+	path = judo-meta-measure
+	url = https://github.com/BlackBeltTechnology/judo-meta-measure
+	branch = develop
+[submodule "judo-meta-rdbms"]
+	path = judo-meta-rdbms
+	url = git@github.com:BlackBeltTechnology/judo-meta-rdbms.git
+	branch = develop
+[submodule "judo-meta-liquibase"]
+	path = judo-meta-liquibase
+	url = git@github.com:BlackBeltTechnology/judo-meta-liquibase.git
+	branch = develop
+[submodule "judo-tatami-base"]
+	path = judo-tatami-base
+	url = git@github.com:BlackBeltTechnology/judo-tatami-base.git
+	branch = develop
+[submodule "judo-meta-query"]
+	path = judo-meta-query
+	url = git@github.com:BlackBeltTechnology/judo-meta-query.git
+	branch = develop
+[submodule "judo-jsl-vscode"]
+	path = judo-jsl-vscode
+	url = git@github.com:BlackBeltTechnology/judo-jsl-vscode.git
+	branch = develop
+[submodule "judo-dao-api"]
+	path = judo-dao-api
+	url = git@github.com:BlackBeltTechnology/judo-dao-api.git
+	branch = develop
+[submodule "judo-sdk-common"]
+	path = judo-sdk-common
+	url = git@github.com:BlackBeltTechnology/judo-sdk-common.git
+	branch = develop
+[submodule "judo-dispatcher-api"]
+	path = judo-dispatcher-api
+	url = git@github.com:BlackBeltTechnology/judo-dispatcher-api.git
+	branch = develop
+[submodule "judo-operation-utils"]
+	path = judo-operation-utils
+	url = git@github.com:BlackBeltTechnology/judo-operation-utils.git
+	branch = develop
+[submodule "judo-tatami-core"]
+	path = judo-tatami-core
+	url = git@github.com:BlackBeltTechnology/judo-tatami-core.git
+	branch = develop

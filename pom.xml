@@ -1,0 +1,108 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>hu.blackbelt.judo</groupId>
+    <artifactId>judo-community-parent</artifactId>
+    <packaging>pom</packaging>
+    <version>${revision}</version>
+
+    <name>JUDO Community :: Parent</name>
+    <description>JUDO runtime core JUDO Specific Language DSL reactor module</description>
+
+    <properties>
+        <revision>1.0.0-SNAPSHOT</revision>
+        <maven>3.8.3</maven>
+        <maven.version>3.8.3</maven.version>
+
+        <project-shortname>judo-community</project-shortname>
+        <project-repositoryId>BlackBeltTechnology/judo-community</project-repositoryId>
+        <deployOnly>false</deployOnly>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <timestamp>${maven.build.timestamp}</timestamp>
+        <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
+        <src.dir>src/main</src.dir>
+        <!--suppress UnresolvedMavenProperty -->
+        <logback-test-config>${maven.multiModuleProjectDirectory}/logback-test.xml</logback-test-config>
+
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <surefire-version>3.0.0-M5</surefire-version>
+        <slf4j-version>1.7.36</slf4j-version>
+        <jacoco.version>0.8.6</jacoco.version>
+
+        <osgi-default-import>
+            org.osgi.framework;version="[1.8,2.0)",
+            !lombok,
+            org.slf4j;version="[1.6,2)",
+            javax.annotation;version="[1.0,2)"
+        </osgi-default-import>
+        <osgi-transaction-import>
+            javax.transaction.xa;version=!,
+            javax.resource;version="[1.6,2)"
+        </osgi-transaction-import>
+
+        <!-- Code Quality-->
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+        <sonar.language>java</sonar.language>
+        <sonar.java.source>${maven.compiler.source}</sonar.java.source>
+        <sonar.coverage.jacoco.xmlReportPaths>
+            ${project.basedir}/../judo-runtime-core-tests-aggregator/target/site/jacoco-aggregate/jacoco.xml
+        </sonar.coverage.jacoco.xmlReportPaths>
+    </properties>
+
+    <url>http://github.com/${project-repositoryId}</url>
+
+    <issueManagement>
+        <url>https://github.com/${project-repositoryId}/issues</url>
+        <system>GitHub Issues</system>
+    </issueManagement>
+
+    <scm>
+        <connection>scm:git:git@github.com:${project-repositoryId}.git</connection>
+        <!--suppress UnresolvedMavenProperty -->
+        <developerConnection>scm:git:ssh://${git.username}@github.com:${project-repositoryId}.git
+        </developerConnection>
+        <url>http://github.com/${project-repositoryId}</url>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>robson</id>
+            <name>Csákány Róbert</name>
+            <email>robert.csakany@blackbelt.hu</email>
+            <url>https://github.com/robertcsakany</url>
+            <organization>BlackBelt Technology</organization>
+            <organizationUrl>http://www.blackbelt.hu</organizationUrl>
+        </developer>
+    </developers>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <modules>
+        <module>judo-meta-jsl</module>
+        <module>judo-meta-psm</module>
+        <module>judo-meta-measure</module>
+        <module>judo-meta-asm</module>
+        <module>judo-meta-expression</module>
+        <module>judo-meta-jql</module>
+        <module>judo-meta-rdbms</module>
+        <module>judo-meta-query</module>
+        <module>judo-meta-liquibase</module>
+        <module>judo-dao-api</module>
+        <module>judo-dispatcher-api</module>
+        <module>judo-operation-utils</module>
+        <module>judo-sdk-common</module>
+        <module>judo-tatami-core</module>
+        <module>judo-tatami-base</module>
+        <module>judo-tatami-jsl</module>
+        <module>judo-runtime-core</module>
+        <module>judo-runtime-core-jsl</module>
+        <module>judo-jsl-vscode</module>
+    </modules>
+
+</project>
