@@ -74,3 +74,6 @@
 	path = judo-tatami-core
 	url = git@github.com:BlackBeltTechnology/judo-tatami-core.git
 	branch = develop
+[submodule "judo-meta-expression-asm"]
+	path = judo-meta-expression-asm
+	url = git@github.com:BlackBeltTechnology/judo-meta-expression-asm.git
