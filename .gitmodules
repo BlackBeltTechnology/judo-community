@@ -16,23 +16,23 @@
 	branch = develop
 [submodule "judo-meta-psm"]
 	path = judo-meta-psm
-	url = https://github.com/BlackBeltTechnology/judo-meta-psm
+	url = git@github.com:BlackBeltTechnology/judo-meta-psm.git
 	branch = develop
 [submodule "judo-meta-asm"]
 	path = judo-meta-asm
-	url = https://github.com/BlackBeltTechnology/judo-meta-asm
+	url = git@github.com:BlackBeltTechnology/judo-meta-asm.git
 	branch = develop
 [submodule "judo-meta-expression"]
 	path = judo-meta-expression
-	url = https://github.com/BlackBeltTechnology/judo-meta-expression
+	url = git@github.com:BlackBeltTechnology/judo-meta-expression.git
 	branch = develop
 [submodule "judo-meta-jql"]
 	path = judo-meta-jql
-	url = https://github.com/BlackBeltTechnology/judo-meta-psm-jql
+	url = git@github.com:BlackBeltTechnology/judo-meta-psm-jql.git
 	branch = develop
 [submodule "judo-meta-measure"]
 	path = judo-meta-measure
-	url = https://github.com/BlackBeltTechnology/judo-meta-measure
+	url = git@github.com:BlackBeltTechnology/judo-meta-measure.git
 	branch = develop
 [submodule "judo-meta-rdbms"]
 	path = judo-meta-rdbms
