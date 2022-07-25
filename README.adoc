@@ -1,2 +1,3 @@
 # JUDO Community
 
+This repository is an aggregator for all judo-community modules.

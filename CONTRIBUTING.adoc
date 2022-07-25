@@ -1,0 +1,82 @@
+# Contributing to JUDO
+
+## Installing the correct versions of Java, Maven and necessary dependencies
+
+JUDO is currently built on top of JDK 11.
+
+Contributors, and CI/CD agents are bot expected to use https://www.azul.com/downloads/?version=java-11-lts&package=jdk[Zulu JDK]
+
+Dependency management is handled by https://maven.apache.org/download.cgi[Maven v3.8.x]
+
+To check if you are using the correct version of Java, you may run `java -version`, which should display something similar:
+
+```
+openjdk version "11.0.14" 2022-01-18 LTS
+OpenJDK Runtime Environment Zulu11.54+23-CA (build 11.0.14+9-LTS)
+OpenJDK 64-Bit Server VM Zulu11.54+23-CA (build 11.0.14+9-LTS, mixed mode)
+```
+
+Checking Maven version is done via running `mvn -version`, which should display something similar to:
+
+```
+Apache Maven 3.8.4 (9b656c72d54e5bacbed989b64718c159fe39b537)
+Maven home: /opt/homebrew/Cellar/maven/3.8.4/libexec
+```
+
+Once you have done that, to get started with the repo simply run:
+
+```sh
+git clone --recurse-submodules git@github.com:BlackBeltTechnology/judo-community.git
+mvn clean install
+```
+
+## Code Structure
+
+Most of the folders (or Maven submodules) are linked via git, therefore have standalone lifecycles. Working on a feature,
+or fix could result in working in multiple modules.
+
+## Submission Guidelines
+
+### <a name="submit-issue"></a> Submitting an Issue
+
+Before you submit an issue, please search the issue tracker. An issue for your problem may already exist and has been
+resolved, or the discussion might inform you of workarounds readily available.
+
+We want to fix all the issues as soon as possible, but before fixing a bug we need to reproduce and confirm it. Having a
+reproducible scenario gives us wealth of important information without going back and forth with you requiring
+additional information, such as:
+
+- the output of `java -version`, `mvn -version`
+- `pom.xml` or `.flattened-pom.xml`
+- and most importantly - a use-case that fails
+
+A minimal reproduction allows us to quickly confirm a bug (or point out a coding problem) as well as confirm that we are
+fixing the right problem.
+
+We will be insisting on a minimal reproduction in order to save maintainers' time and ultimately be able to fix more
+bugs. We understand that sometimes it might be hard to extract essentials bits of code from a larger codebase, but we
+really need to isolate the problem before we can fix it.
+
+You can file new issues by filling out our [issue form](https://github.com/BlackBeltTechnology/judo-community/issues/new/choose).
+
+### <a name="submit-pr"></a> Submitting a PR
+
+This project follows [GitHub's standard forking model](https://guides.github.com/activities/forking/). Please fork the
+project to submit pull requests.
+
+## Commands
+
+The following commands are always ran against all submodules. If you are working on a dedicated module, then it could be
+sufficient to run them in their corresponding folders!
+
+### Run Tests
+
+```sh
+$ mvn clean test
+```
+
+### Run Full build
+
+```sh
+$ mvn clean install
+```
