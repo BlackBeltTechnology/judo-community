@@ -1,3 +1,34 @@
-# JUDO Community
+image::docs/assets/judo_logo.svg/[JUDO,200,200,align="center"]
 
-This repository is an aggregator for all judo-community modules.
+[.text-center]
+A low-code development toolbox optimized for creating and operating enterprise applications.
+
+# What is low-code?
+
+Simply put, low-code development is a paradigm that uses models as the primary artifact of the development process, and
+the implementation is (semi-)automatically generated from the models.
+
+# Target audience
+
+JUDO is designed for software developers who want to speed up their work and focus on business needs instead of typing
+architectural glue code and copying design patterns.
+
+# Getting started
+
+WIP
+
+# Questions
+
+For questions and support please use the official https://discord.gg/3yMGVaTr[Discord channel]. The issue list of this
+repo is exclusively for bug reports and feature requests.
+
+# Issues
+
+For issue submission, please follow the guidelines displayed under each issue category.
+
+Please keep in mind that this repository is only an aggregator, therefore if you have a specific problem / idea / suggestion
+for a certain sub-repo, then it is encouraged to open the ticket there.
+
+# License
+
+JUDO Community modules are licensed under the https://www.eclipse.org/legal/epl-2.0/[Eclipse Public License - v 2.0].
