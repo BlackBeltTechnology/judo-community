@@ -6,6 +6,10 @@ labels: "type: bug"
 
 <!-- Please do your best to fill out all of the sections below! -->
 
+## Bug Scope
+
+<!-- JUDO Community modules are physically maintained in their dedicated repositories. Before submitting a bug, if the actual scope of the bug is well known, please open a bug ticket in the corresponding repository/repositories! Otherwise you can provide "unknown" here -->
+
 ## Current Behavior
 
 <!-- What is the behavior that currently you experience? -->
