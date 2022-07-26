@@ -5,7 +5,6 @@ ifdef::env-github[]
 </p>
 ++++
 endif::[]
-
 ifndef::env-github[]
 image::docs/assets/judo_logo.svg/[JUDO,200,200,align="center"]
 endif::[]
@@ -17,10 +16,23 @@ ifdef::env-github[]
 </p>
 ++++
 endif::[]
-
 ifndef::env-github[]
 [.text-center]
 A low-code development toolbox optimized for creating and operating enterprise applications.
+endif::[]
+
+ifdef::env-github[]
+++++
+<p align="center">
+  <a href="https://github.com/BlackBeltTechnology/judo-community" target="_blank"><img src="https://img.shields.io/badge/license-EPL%20v2.0-blue.svg" alt="License" /></a>
+  <a href="https://discord.gg/3yMGVaTr" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord" /></a>
+</p>
+++++
+endif::[]
+ifndef::env-github[]
+[.text-center]
+image:https://img.shields.io/badge/license-EPL%20v2.0-blue.svg[link="https://github.com/BlackBeltTechnology/judo-community"]
+image:https://img.shields.io/badge/discord-online-brightgreen.svg[link="https://discord.gg/3yMGVaTr"]
 endif::[]
 
 # What is low-code?
