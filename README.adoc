@@ -1,12 +1,12 @@
 ifdef::env-github[]
 ++++
 <p align="center">
-  <img width="200" height="200" src="https://github.com/BlackBeltTechnology/judo-community/raw/develop/docs/assets/judo_logo.svg">
+  <img width="200" height="160" src="https://github.com/BlackBeltTechnology/judo-community/raw/develop/docs/assets/judo_logo.svg">
 </p>
 ++++
 endif::[]
 ifndef::env-github[]
-image::docs/assets/judo_logo.svg/[JUDO,200,200,align="center"]
+image::docs/assets/judo_logo.svg/[JUDO,200,160,align="center"]
 endif::[]
 
 ifdef::env-github[]
