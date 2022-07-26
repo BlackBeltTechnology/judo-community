@@ -10,8 +10,18 @@ ifndef::env-github[]
 image::docs/assets/judo_logo.svg/[JUDO,200,200,align="center"]
 endif::[]
 
+ifdef::env-github[]
+++++
+<p align="center">
+  A low-code development toolbox optimized for creating and operating enterprise applications.
+</p>
+++++
+endif::[]
+
+ifndef::env-github[]
 [.text-center]
 A low-code development toolbox optimized for creating and operating enterprise applications.
+endif::[]
 
 # What is low-code?
 
