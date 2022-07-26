@@ -37,7 +37,7 @@ or fix could result in working in multiple modules.
 
 ## Submission Guidelines
 
-### <a name="submit-issue"></a> Submitting an Issue
+### Submitting an Issue
 
 Before you submit an issue, please search the issue tracker. An issue for your problem may already exist and has been
 resolved, or the discussion might inform you of workarounds readily available.
@@ -59,7 +59,7 @@ really need to isolate the problem before we can fix it.
 
 You can file new issues by filling out our [issue form](https://github.com/BlackBeltTechnology/judo-community/issues/new/choose).
 
-### <a name="submit-pr"></a> Submitting a PR
+### Submitting a PR
 
 This project follows [GitHub's standard forking model](https://guides.github.com/activities/forking/). Please fork the
 project to submit pull requests.
