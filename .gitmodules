@@ -77,3 +77,12 @@
 [submodule "judo-meta-expression-asm"]
 	path = judo-meta-expression-asm
 	url = git@github.com:BlackBeltTechnology/judo-meta-expression-asm.git
+	branch = develop
+[submodule "judo-jsl-springboot-parent"]
+	path = judo-jsl-springboot-parent
+	url = git@github.com:BlackBeltTechnology/judo-jsl-springboot-parent.git
+	branch = develop
+[submodule "judo-jsl-springboot-archetype"]
+	path = judo-jsl-springboot-archetype
+	url = git@github.com:BlackBeltTechnology/judo-jsl-springboot-archetype.git
+	branch = develop
