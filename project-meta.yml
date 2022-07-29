@@ -378,3 +378,37 @@
   url: git@github.com:BlackbeltTechnology/judo-tatami-jsl.git
   version: 1.1.0.20220705_164118_b5b6817e_develop
   virtual: false
+- afterlocalbuild: []
+  afterversionchange: []
+  beforelocalbuild: []
+  branch: develop
+  buildp2site: []
+  dependencies:
+  - judo-tatami-core
+  - judo-tatami-jsl
+  - judo-runtime-core
+  github: BlackbeltTechnology/judo-jsl-springboot-parent
+  ignored: false
+  name: judo-jsl-springboot-parent
+  path: judo-jsl-springboot-parent
+  property: judo-jsl-springboot-parent-version
+  rank: 5
+  url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-parent.git
+  version: 1.1.0.20220705_164118_b5b6817e_develop
+  virtual: false
+- afterlocalbuild: []
+  afterversionchange: []
+  beforelocalbuild: []
+  branch: develop
+  buildp2site: []
+  dependencies:
+  - judo-jsl-springboot-parent
+  github: BlackbeltTechnology/judo-jsl-springboot-archetype
+  ignored: false
+  name: judo-jsl-springboot-archetype
+  path: judo-jsl-springboot-archetype
+  property: judo-jsl-springboot-archetype-version
+  rank: 6
+  url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-archetype.git
+  version: 1.1.0.20220705_164118_b5b6817e_develop
+  virtual: false
