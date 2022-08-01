@@ -95,7 +95,8 @@ Maven home: /usr/share/maven
 
 === Bootstrap project from archetype
 
-Running the following command generates a Spring Boot project with a test model and a simple integration test:
+Running the following command generates a https://github.com/spring-projects/spring-boot[Spring Boot] project with a
+test model and a simple integration test:
 
 [source,bash]
 ----
