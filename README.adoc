@@ -35,32 +35,122 @@ image:https://img.shields.io/badge/license-EPL%20v2.0-blue.svg[link="https://git
 image:https://img.shields.io/badge/discord-online-brightgreen.svg[link="https://discord.gg/3yMGVaTr"]
 endif::[]
 
-# What is low-code?
+== What is low-code?
 
 Simply put, low-code development is a paradigm that uses models as the primary artifact of the development process, and
 the implementation is (semi-)automatically generated from the models.
 
-# Target audience
+== Target audience
 
 JUDO is designed for software developers who want to speed up their work and focus on business needs instead of typing
 architectural glue code and copying design patterns.
 
-# Getting started
+== Getting started
 
-WIP
+In the following section we will generate a simple Spring Boot project with one Entity prepared:
 
-# Questions
+=== Bootstrap project from archetype
+
+Running the following command generates a Spring Boot project with a test model and a simple integration test:
+
+[source,bash]
+----
+mvn org.apache.maven.plugins:maven-archetype-plugin:3.1.1:generate -B \
+  -DarchetypeGroupId=hu.blackbelt.judo.jsl \
+  -DarchetypeArtifactId=judo-jsl-springboot-archetype \
+  -DgroupId=com.example \
+  -DmodelName=Test
+----
+
+> For detailed documentation on the Archetype, please visit the https://github.com/BlackBeltTechnology/judo-jsl-springboot-archetype[judo-jsl-springboot-archetype]
+repository
+
+=== application.properties
+
+This is a standard Spring Boot resource which by default is generated to utilize HSQL Database (we support PostgreSQL as well).
+
+```
+spring.datasource.driver-class-name=org.hsqldb.jdbc.JDBCDriver
+spring.datasource.url=jdbc:hsqldb:mem:testdb;DB_CLOSE_DELAY=-1
+spring.datasource.username=sa
+spring.datasource.password=
+spring.liquibase.change-log=classpath:model/Test-liquibase_hsqldb.changelog.xml
+judo.modelName=Test
+```
+
+=== Test.jsl
+
+The generated model defines a custom type named `String`, an entity `Person` which  __- for the sake of having fun -__ also
+has a `derived` attribute called `fullName`.
+
+```
+model Test
+
+type string String(max-length = 128)
+
+entity Person {
+    field String firstName
+    field String lastName
+    derived String fullName => self.firstName + " " \
+        + self.lastName ;
+}
+
+```
+
+=== TestSpringApplication.java
+
+This is just a bare-bones Spring Boot Application definition similarly to what you'd get if you'd have used the
+https://start.spring.io[start.spring.io] generator
+
+=== TestSpringApplicationTests.java
+
+[source,java]
+----
+package com.example.test;
+
+import com.example.test.test.sdk.test.test.Person;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+@SpringBootTest
+class TestSpringApplicationTests {
+
+	@Autowired
+	Person.PersonDao personDao;
+
+	@Test
+	void testDaoFunctions() {
+		Person createdPerson = personDao.create(Person.builder()
+				.withFirstName("FirstName")
+				.withLastName("LastName")
+				.build());
+
+		assertEquals(Optional.of("FirstName"), createdPerson.getFirstName());
+		assertEquals(Optional.of("LastName"), createdPerson.getLastName());
+		// Test derived
+		assertEquals(Optional.of("FirstName LastName"), createdPerson.getFullName());
+	}
+
+}
+----
+
+== Questions
 
 For questions and support please use the official https://discord.gg/3yMGVaTr[Discord channel]. The issue list of this
 repo is exclusively for bug reports and feature requests.
 
-# Issues
+== Issues
 
 For issue submission, please follow the guidelines displayed under each issue category.
 
 Please keep in mind that this repository is only an aggregator, therefore if you have a specific problem / idea / suggestion
 for a certain sub-repo, then it is encouraged to open the ticket there.
 
-# License
+== License
 
 JUDO Community modules are licensed under the https://www.eclipse.org/legal/epl-2.0/[Eclipse Public License - v 2.0].
