@@ -47,8 +47,6 @@ architectural glue code and copying design patterns.
 
 == Getting started
 
-In the following section we will generate a simple Spring Boot project with one Entity prepared:
-
 === Bootstrap project from archetype
 
 Running the following command generates a Spring Boot project with a test model and a simple integration test:
@@ -119,23 +117,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest
 class TestSpringApplicationTests {
+    @Autowired
+    Person.PersonDao personDao;
 
-	@Autowired
-	Person.PersonDao personDao;
+    @Test
+    void testDaoFunctions() {
+        Person createdPerson = personDao.create(Person.builder()
+                .withFirstName("FirstName")
+                .withLastName("LastName")
+                .build());
 
-	@Test
-	void testDaoFunctions() {
-		Person createdPerson = personDao.create(Person.builder()
-				.withFirstName("FirstName")
-				.withLastName("LastName")
-				.build());
-
-		assertEquals(Optional.of("FirstName"), createdPerson.getFirstName());
-		assertEquals(Optional.of("LastName"), createdPerson.getLastName());
-		// Test derived
-		assertEquals(Optional.of("FirstName LastName"), createdPerson.getFullName());
-	}
-
+        assertEquals(Optional.of("FirstName"), createdPerson.getFirstName());
+        assertEquals(Optional.of("LastName"), createdPerson.getLastName());
+        // Test derived
+        assertEquals(Optional.of("FirstName LastName"), createdPerson.getFullName());
+    }
 }
 ----
 
