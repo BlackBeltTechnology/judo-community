@@ -45,6 +45,52 @@ the implementation is (semi-)automatically generated from the models.
 JUDO is designed for software developers who want to speed up their work and focus on business needs instead of typing
 architectural glue code and copying design patterns.
 
+== System Requirements
+
+=== JDK 11
+
+We currently only support OpenJDK 11. Our recommended vendor is https://www.azul.com/downloads/?version=java-11-lts&package=jdk[Zulu JDK]
+
+Checking your JDK version:
+
+[source,bash]
+----
+java -version
+----
+
+Which should display something similar to:
+
+[source,bash]
+----
+openjdk version "11.0.16" 2022-07-19 LTS
+OpenJDK Runtime Environment Zulu11.58+15-CA (build 11.0.16+8-LTS)
+...
+----
+
+> The key here the version number, which in our case is: `11.0.16`. The version number **MUST** start with `11`!
+
+=== Maven 3.8.x
+
+Our project orchestrator and build tool is https://maven.apache.org/download.cgi[Apache Maven v3.8.x].
+
+Checking your Maven version:
+
+[source,bash]
+----
+mvn -version
+----
+
+Which should display something similar to:
+
+[source,bash]
+----
+Apache Maven 3.8.6
+Maven home: /usr/share/maven
+...
+----
+
+> The key here is again, the version number, which in our case is: `3.8.6`. The version number **MUST** start with `3.8`!
+
 == Getting started
 
 === Bootstrap project from archetype
@@ -146,6 +192,10 @@ For issue submission, please follow the guidelines displayed under each issue ca
 
 Please keep in mind that this repository is only an aggregator, therefore if you have a specific problem / idea / suggestion
 for a certain sub-repo, then it is encouraged to open the ticket there.
+
+== Contributing to JUDO
+
+Everyone is welcome to contribute to JUDO! As a starter, please read the corresponding link:CONTRIBUTING.adoc[CONTRIBUTING] guide for details!
 
 == License
 
