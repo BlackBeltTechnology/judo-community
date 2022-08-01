@@ -25,7 +25,7 @@ ifdef::env-github[]
 ++++
 <p align="center">
   <a href="https://github.com/BlackBeltTechnology/judo-community" target="_blank"><img src="https://img.shields.io/badge/license-EPL%20v2.0-blue.svg" alt="License" /></a>
-  <a href="https://discord.gg/za3rMCX9tU" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord" /></a>
+  <a href="https://discord.com/channels/918892501434241054" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord" /></a>
 </p>
 ++++
 endif::[]
