@@ -116,11 +116,11 @@ Once the archetype is finished generating sources your project, should be availa
 
 Running `mvn clean install` under your project will run the build and tests as well. If you haven't modified anything, the process should finish without any errors.
 
-=== Generated sources
+=== Bootstrapped sources
 
 ==== application.properties
 
-__Located under: `src/main/resources`__
+Located under: `src/main/resources`
 
 This is a standard Spring Boot resource which by default is generated to utilize HSQL Database (we support PostgreSQL as well).
 
@@ -135,7 +135,7 @@ judo.modelName=Test
 
 ==== Test.jsl
 
-__Located under: `src/main/resources/model`__
+Located under: `src/main/resources/model`
 
 The model defines a custom type named `String`, an entity `Person` which  __- for the sake of having fun -__ also
 has a `derived` attribute called `fullName`.
@@ -156,14 +156,14 @@ entity Person {
 
 ==== TestSpringApplication.java
 
-__Located under: `src/main/java/com/example/test`__
+Located under: `src/main/java/com/example/test`
 
 This is the entry point of a bare-bones Spring Boot Application similar to what you'd get if you'd have used the
 https://start.spring.io[start.spring.io] generator
 
 ==== TestSpringApplicationTests.java
 
-__Located under: `src/test/java/com/example/test`__
+Located under: `src/test/java/com/example/test`
 
 [source,java]
 ----
