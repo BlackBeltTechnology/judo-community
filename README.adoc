@@ -120,6 +120,8 @@ Running `mvn clean install` under your project will run the build and tests as w
 
 ==== application.properties
 
+__Located under: `src/main/resources`__
+
 This is a standard Spring Boot resource which by default is generated to utilize HSQL Database (we support PostgreSQL as well).
 
 ```
@@ -133,7 +135,9 @@ judo.modelName=Test
 
 ==== Test.jsl
 
-The generated model defines a custom type named `String`, an entity `Person` which  __- for the sake of having fun -__ also
+__Located under: `src/main/resources/model`__
+
+The model defines a custom type named `String`, an entity `Person` which  __- for the sake of having fun -__ also
 has a `derived` attribute called `fullName`.
 
 ```
@@ -152,10 +156,14 @@ entity Person {
 
 ==== TestSpringApplication.java
 
-This is just a bare-bones Spring Boot Application definition similarly to what you'd get if you'd have used the
+__Located under: `src/main/java/com/example/test`__
+
+This is the entry point of a bare-bones Spring Boot Application similar to what you'd get if you'd have used the
 https://start.spring.io[start.spring.io] generator
 
 ==== TestSpringApplicationTests.java
+
+__Located under: `src/test/java/com/example/test`__
 
 [source,java]
 ----
