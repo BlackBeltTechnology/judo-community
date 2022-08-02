@@ -112,7 +112,7 @@ mvn org.apache.maven.plugins:maven-archetype-plugin:3.1.1:generate -B \
 > For detailed documentation on the Archetype, please visit the https://github.com/BlackBeltTechnology/judo-jsl-springboot-archetype[judo-jsl-springboot-archetype]
 repository
 
-Once the archetype is finished generating sources your project, should be available under `~/projects/com.example.Test`
+Once the archetype has finished generating sources, your project should be available under `~/projects/com.example.Test`
 
 Running `mvn clean install` under your project will run the build and tests as well. If you haven't modified anything, the process should finish without any errors.
 
