@@ -93,7 +93,9 @@ Maven home: /usr/share/maven
 
 == Getting started
 
-=== Bootstrap project from archetype
+=== Bootstrap a project from an archetype
+
+Open your terminal, and go to a folder where you would like the archetype to generate your project under (e.g.: `~/projects/`).
 
 Running the following command generates a https://github.com/spring-projects/spring-boot[Spring Boot] project with a
 test model and a simple integration test:
@@ -110,7 +112,13 @@ mvn org.apache.maven.plugins:maven-archetype-plugin:3.1.1:generate -B \
 > For detailed documentation on the Archetype, please visit the https://github.com/BlackBeltTechnology/judo-jsl-springboot-archetype[judo-jsl-springboot-archetype]
 repository
 
-=== application.properties
+Once the archetype is finished generating sources your project, should be available under `~/projects/com.example.Test`
+
+Running `mvn clean install` under your project will run the build and tests as well. If you haven't modified anything, the process should finish without any errors.
+
+=== Generated sources
+
+==== application.properties
 
 This is a standard Spring Boot resource which by default is generated to utilize HSQL Database (we support PostgreSQL as well).
 
@@ -123,7 +131,7 @@ spring.liquibase.change-log=classpath:model/Test-liquibase_hsqldb.changelog.xml
 judo.modelName=Test
 ```
 
-=== Test.jsl
+==== Test.jsl
 
 The generated model defines a custom type named `String`, an entity `Person` which  __- for the sake of having fun -__ also
 has a `derived` attribute called `fullName`.
@@ -142,12 +150,12 @@ entity Person {
 
 ```
 
-=== TestSpringApplication.java
+==== TestSpringApplication.java
 
 This is just a bare-bones Spring Boot Application definition similarly to what you'd get if you'd have used the
 https://start.spring.io[start.spring.io] generator
 
-=== TestSpringApplicationTests.java
+==== TestSpringApplicationTests.java
 
 [source,java]
 ----
