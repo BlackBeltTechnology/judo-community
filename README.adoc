@@ -42,7 +42,7 @@ the implementation is (semi-)automatically generated from the models.
 
 == Target audience
 
-JUDO is designed for software developers who want to speed up their work and focus on business needs instead of typing
+JUDO is designed for Java developers who want to speed up their work and focus on business needs instead of typing
 architectural glue code and copying design patterns.
 
 == System Requirements
