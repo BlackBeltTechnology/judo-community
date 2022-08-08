@@ -1,0 +1,114 @@
+= Key Generation
+
+The following steps are utilized in most if not all of our JUDO projects.
+
+== Generate PGP keys
+
+In this example we will use docker to keep our system clean. Official sonatype documentation is here: https://central.sonatype.org/pages/working-with-pgp-signatures.html
+
+[source,bash]
+----
+docker run -it maven:3.5.4-jdk-8 /bin/bash
+----
+
+Generating keys. It's an interactive command, our details have to be defined. Later <NAME> and <EMAIL> will be used
+as it given.
+
+[source,bash]
+----
+root@432f6837323b:/# gpg --gen-key
+gpg (GnuPG) 2.1.18; Copyright (C) 2017 Free Software Foundation, Inc.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+gpg: directory '/root/.gnupg' created
+gpg: keybox '/root/.gnupg/pubring.kbx' created
+Note: Use "gpg --full-generate-key" for a full featured key generation dialog.
+
+GnuPG needs to construct a user ID to identify your key.
+
+Real name: <NAME>
+Email address: <SECRET PASSWORD>
+You selected this USER-ID:
+    "<NAME> <EMAIL>"
+
+Change (N)ame, (E)mail, or (O)kay/(Q)uit? O
+We need to generate a lot of random bytes. It is a good idea to perform
+some other action (type on the keyboard, move the mouse, utilize the
+disks) during the prime generation; this gives the random number
+generator a better chance to gain enough entropy.
+We need to generate a lot of random bytes. It is a good idea to perform
+some other action (type on the keyboard, move the mouse, utilize the
+disks) during the prime generation; this gives the random number
+generator a better chance to gain enough entropy.
+gpg: /root/.gnupg/trustdb.gpg: trustdb created
+gpg: key <FINGERPRINT> marked as ultimately trusted
+gpg: directory '/root/.gnupg/openpgp-revocs.d' created
+gpg: revocation certificate stored as '/root/.gnupg/openpgp-revocs.d/<PUBLIC KEY>.rev'
+public and secret key created and signed.
+
+pub   rsa2048 2018-07-26 [SC] [expires: 2020-07-25]
+      <PUBLIC KEY>
+      <PUBLIC KEY>
+uid                      <NAME> <EMAIL>
+sub   rsa2048 2018-07-26 [E] [expires: 2020-07-25]
+----
+
+To check keys, run the following command
+
+[source,bash]
+----
+root@432f6837323b:/# gpg --list-keys
+
+gpg: checking the trustdb
+gpg: marginals needed: 3  completes needed: 1  trust model: pgp
+gpg: depth: 0  valid:   1  signed:   0  trust: 0-, 0q, 0n, 0m, 0f, 1u
+gpg: next trustdb check due at 2020-07-25
+/root/.gnupg/pubring.kbx
+------------------------
+pub   rsa2048 2018-07-26 [SC] [expires: 2020-07-25]
+      <PUBLIC KEY>
+uid           [ultimate] <NAME> <EMAIL>
+sub   rsa2048 2018-07-26 [E] [expires: 2020-07-25]
+----
+
+Add keys to a PGP keyserver. In our example ubuntu's keyserver is used, but you can use any of following:
+https://sks-keyservers.net/status/
+
+[source,bash]
+----
+root@432f6837323b:/# gpg --keyserver hkp://keyserver.ubuntu.com --send-keys <FINGEPRINT>
+gpg: sending key <FINGEPRINT> to hkp://keyserver.ubuntu.com
+----
+
+Export Secret Key - The returned string will be used as `$GPG_KEYS_SECRETKEYS` in our build.
+
+[source,bash]
+----
+root@432f6837323b:/# gpg -a --export-secret-keys <EMAIL> | base64 -w 0
+<SECRETKEY>
+----
+
+Export Owner Trust Key - The returned string will be used as `$KEYS_OWNERTRUST` in our build.
+
+[source,bash]
+----
+root@432f6837323b:/# gpg --export-ownertrust | base64 -w 0
+<OWNRTRUST>
+----
+
+== Import PGP keys
+
+GnuPG version >= 2.1 utils have to be installed. Sometimes the curses based Pinentry does not work. The far most common reason for
+this is that the environment variable GPG_TTY has not been set correctly. Make sure that it has been set to a real
+tty device and not just to ‘/dev/tty’; i.e. ‘GPG_TTY=tty’ is plainly wrong; what you want is ‘GPG_TTY=`tty`’ — note the
+back ticks. Also make sure that this environment variable gets exported, that is you should follow up the setting with
+an ‘export GPG_TTY’ (assuming a Bourne style shell). Even for GUI based Pinentries; you should have set GPG_TTY. See
+the section on installing the gpg-agent on how to do it on Gnu PGP documentation.
+
+[source,bash]
+----
+export GPG_TTY=$(tty)
+echo "$GPG_KEYS_SECRETKEYS" | base64 --decode | gpg --import --batch
+echo "$KEYS_OWNERTRUST" | base64 --decode | gpg --import-ownertrust
+----
