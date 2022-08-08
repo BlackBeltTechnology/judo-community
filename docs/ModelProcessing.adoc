@@ -1,0 +1,90 @@
+= Model Processing
+
+The following section describes what model transformation steps are involved in the generation of a typical JUDO application.
+
+[[model-processing-pipeline]]
+.Model processing pipeline
+[plantuml, model-processing-pipeline-diagram, alt="Model processing diagram"]
+----
+start
+
+partition PSM {
+  :judo-meta-psm;
+}
+
+partition ASM {
+  fork
+    :judo-meta-asm;
+  fork again
+    :judo-meta-measure;
+  fork again
+    while (more unprocessed expression?)
+      :judo-meta-jql;
+    endwhile
+    :judo-meta-jql-extract;
+  end fork
+  :judo-meta-expression;
+}
+
+partition LSM {
+  fork
+    while (more dialect?)
+      :judo-meta-rdbms;
+      fork
+        :judo-meta-liquibase;
+      end fork
+    endwhile
+  fork again
+    :judo-meta-openapi;
+  end fork
+}
+
+stop
+----
+
+[[model-dependencies]]
+.Model dependencies
+[plantuml, model-dependencies-diagram, alt="Model dependencies diagram"]
+----
+
+package "PSM" {
+  [judo-meta-psm]
+}
+
+package "ASM" {
+  [judo-meta-asm] --> [judo-meta-psm]
+  note right of [judo-meta-asm] : psm2asm
+
+  [judo-meta-measure] --> [judo-meta-psm]
+  note right of [judo-meta-measure] : psm2measure
+
+  [judo-meta-psm-jql] --> [judo-meta-psm]
+  note left of [judo-meta-psm-jql] : psm2jql
+
+  [judo-meta-psm-jql-extract] --> [judo-meta-psm-jql]
+  [judo-meta-psm-jql-extract] --> [judo-meta-psm]
+  note left of [judo-meta-psm-jql-extract] : psm2jql
+
+  [judo-meta-expression] --> [judo-meta-asm]
+  [judo-meta-expression] --> [judo-meta-measure]
+  [judo-meta-expression] --> [judo-meta-psm-jql-extract]
+  note right of [judo-meta-expression] : jql2expression
+
+  [judo-meta-evaluation] --> [judo-meta-expression]
+
+  [judo-meta-query] --> [judo-meta-evaluation]
+}
+
+package "LSM" {
+  [judo-meta-rdbms] --> [judo-meta-asm]
+  note right of [judo-meta-rdbms] : asm2rdbms
+
+  [judo-meta-liquibase] --> [judo-meta-rdbms]
+  note right of [judo-meta-liquibase] : asm2liquibase
+
+  [judo-meta-openapi] --> [judo-meta-asm]
+  note right of [judo-meta-openapi] : asm2openapi
+}
+
+----
+
