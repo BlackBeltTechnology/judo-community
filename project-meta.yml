@@ -98,6 +98,30 @@
   branch: develop
   buildp2site:
   - mvn clean package -Dmaven.test.skip=true
+  dependencies:
+  - judo-meta-asm
+  - judo-meta-expression
+  - judo-meta-jql
+  - judo-meta-measure
+  github: BlackbeltTechnology/judo-meta-expression-asm
+  ignored: false
+  name: judo-meta-expression-asm
+  path: judo-meta-expression-asm
+  property: judo-meta-expression-asm-version
+  rank: 3
+  url: git@github.com:BlackbeltTechnology/judo-meta-expression-asm.git
+  version: 1.0.1.20220629_162820_56ca208c_develop
+  virtual: false
+- afterlocalbuild:
+  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
+  afterversionchange:
+  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
+  - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
+  beforelocalbuild:
+  - mvn install -DlocalP2 -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
+  branch: develop
+  buildp2site:
+  - mvn clean package -Dmaven.test.skip=true
   dependencies: []
   github: BlackbeltTechnology/judo-meta-psm-jql
   ignored: false
@@ -257,6 +281,7 @@
   - judo-meta-asm
   - judo-meta-rdbms
   - judo-meta-expression
+  - judo-meta-expression-asm
   - judo-meta-measure
   - judo-meta-liquibase
   - judo-meta-query
@@ -269,7 +294,7 @@
   name: judo-runtime-core
   path: judo-runtime-core
   property: judo-runtime-core-version
-  rank: 4
+  rank: 5
   url: git@github.com:BlackbeltTechnology/judo-runtime-core.git
   version: 1.0.0.20220705_154229_a00ee038_develop
   virtual: false
@@ -287,7 +312,7 @@
   name: judo-runtime-core-jsl
   path: judo-runtime-core-jsl
   property: judo-runtime-core-jsl-version
-  rank: 5
+  rank: 6
   url: git@github.com:BlackbeltTechnology/judo-runtime-core-jsl.git
   version: 1.0.0.20220705_164251_516f86b2_develop
   virtual: false
@@ -318,6 +343,7 @@
   - judo-meta-psm
   - judo-meta-asm
   - judo-meta-expression
+  - judo-meta-expression-asm
   - judo-meta-jql
   - judo-meta-measure
   - judo-meta-rdbms
@@ -331,7 +357,7 @@
   name: judo-tatami-base
   path: judo-tatami-base
   property: judo-tatami-base-version
-  rank: 3
+  rank: 4
   url: git@github.com:BlackbeltTechnology/judo-tatami-base.git
   version: 1.1.0.20220629_163417_3b5f8c33_develop
   virtual: false
@@ -374,7 +400,7 @@
   name: judo-tatami-jsl
   path: judo-tatami-jsl
   property: judo-tatami-jsl-version
-  rank: 4
+  rank: 5
   url: git@github.com:BlackbeltTechnology/judo-tatami-jsl.git
   version: 1.1.0.20220705_164118_b5b6817e_develop
   virtual: false
@@ -392,7 +418,7 @@
   name: judo-jsl-springboot-parent
   path: judo-jsl-springboot-parent
   property: judo-jsl-springboot-parent-version
-  rank: 5
+  rank: 6
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-parent.git
   version: 1.1.0.20220705_164118_b5b6817e_develop
   virtual: false
@@ -408,7 +434,7 @@
   name: judo-jsl-springboot-archetype
   path: judo-jsl-springboot-archetype
   property: judo-jsl-springboot-archetype-version
-  rank: 6
+  rank: 7
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-archetype.git
   version: 1.1.0.20220705_164118_b5b6817e_develop
   virtual: false
