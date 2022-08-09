@@ -198,6 +198,10 @@ class TestSpringApplicationTests {
 }
 ----
 
+== Documentation
+
+For a more detailed view on JUDO and it's modules, please check the link:docs/README.adoc[Documentation] section.
+
 == Questions
 
 For questions and support please use the official https://discord.com/channels/918892501434241054[Discord channel]. The issue list of this

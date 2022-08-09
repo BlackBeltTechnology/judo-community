@@ -1,0 +1,9 @@
+= JUDO Documentation
+
+== General
+
+* link:00-architecture.adoc[Architecture]: A deep dive into the JUDO architecture.
+
+== Miscellaneous
+
+* link:90-key-generation.adoc[Key Generation]: Description of the key generation and usage process utilized in our CI/CD pipeline
