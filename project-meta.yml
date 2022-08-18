@@ -4,6 +4,21 @@
   branch: develop
   buildp2site: []
   dependencies: []
+  github: BlackbeltTechnology/judo-misc-p2
+  ignored: false
+  name: judo-misc-p2
+  path: judo-misc-p2
+  property: judo-misc-p2-version
+  rank: 1
+  url: git@github.com:BlackbeltTechnology/judo-misc-p2.git
+  version: 1.0.0-notset
+  virtual: false
+- afterlocalbuild: []
+  afterversionchange: []
+  beforelocalbuild: []
+  branch: develop
+  buildp2site: []
+  dependencies: []
   github: BlackbeltTechnology/judo-dao-api
   ignored: false
   name: judo-dao-api
