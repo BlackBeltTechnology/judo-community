@@ -1,4 +1,5 @@
 strict digraph  {
+"judo-misc-p2 (1)" [label="judo-misc-p2 (1)", shape=box];
 "judo-dao-api (1)" [label="judo-dao-api (1)", shape=box];
 "judo-dispatcher-api (1)" [label="judo-dispatcher-api (1)", shape=box];
 "judo-jsl-vscode (2)" [label="judo-jsl-vscode (2)", shape=box];
@@ -23,24 +24,24 @@ strict digraph  {
 "judo-jsl-springboot-archetype (7)" [label="judo-jsl-springboot-archetype (7)", shape=box];
 "judo-jsl-vscode (2)" -> "judo-meta-jsl (1)";
 "judo-meta-expression (2)" -> "judo-meta-measure (1)";
-"judo-meta-expression (2)" -> "judo-meta-asm (1)";
 "judo-meta-expression (2)" -> "judo-meta-psm (1)";
+"judo-meta-expression (2)" -> "judo-meta-asm (1)";
 "judo-meta-expression (2)" -> "judo-meta-jql (1)";
 "judo-meta-expression-asm (3)" -> "judo-meta-expression (2)";
 "judo-operation-utils (2)" -> "judo-dao-api (1)";
-"judo-operation-utils (2)" -> "judo-dispatcher-api (1)";
 "judo-operation-utils (2)" -> "judo-meta-asm (1)";
+"judo-operation-utils (2)" -> "judo-dispatcher-api (1)";
 "judo-runtime-core (5)" -> "judo-tatami-base (4)";
 "judo-runtime-core (5)" -> "judo-meta-query (1)";
 "judo-runtime-core-jsl (6)" -> "judo-tatami-jsl (5)";
 "judo-runtime-core-jsl (6)" -> "judo-runtime-core (5)";
 "judo-sdk-common (2)" -> "judo-dao-api (1)";
 "judo-sdk-common (2)" -> "judo-meta-asm (1)";
-"judo-tatami-base (4)" -> "judo-meta-expression-asm (3)";
-"judo-tatami-base (4)" -> "judo-sdk-common (2)";
-"judo-tatami-base (4)" -> "judo-meta-liquibase (1)";
-"judo-tatami-base (4)" -> "judo-tatami-core (1)";
 "judo-tatami-base (4)" -> "judo-operation-utils (2)";
+"judo-tatami-base (4)" -> "judo-sdk-common (2)";
+"judo-tatami-base (4)" -> "judo-meta-expression-asm (3)";
+"judo-tatami-base (4)" -> "judo-tatami-core (1)";
+"judo-tatami-base (4)" -> "judo-meta-liquibase (1)";
 "judo-tatami-base (4)" -> "judo-meta-rdbms (1)";
 "judo-tatami-jsl (5)" -> "judo-tatami-base (4)";
 "judo-tatami-jsl (5)" -> "judo-meta-jsl (1)";
