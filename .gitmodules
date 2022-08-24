@@ -86,3 +86,7 @@
 	path = judo-jsl-springboot-archetype
 	url = git@github.com:BlackBeltTechnology/judo-jsl-springboot-archetype.git
 	branch = develop
+[submodule "judo-misc-p2"]
+	path = judo-misc-p2
+	url = git@github.com:BlackBeltTechnology/judo-misc-p2.git
+	branch = develop
