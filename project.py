@@ -268,7 +268,11 @@ class Module(object):
     def __init__(self, init_dict):
         self.name = init_dict['name']
         self.url = init_dict['url']
-        self.path = init_dict['path']
+
+        self.path = None
+        if 'path' in init_dict:
+            self.path = init_dict['path']
+
         self.branch = init_dict['branch']
         self.property = init_dict['property']
         self.rank = 1
@@ -361,6 +365,9 @@ class Module(object):
 
 
     def update_dependency_versions_in_pom(self, write_pom=False):
+        if self.path is None:
+            return
+
         if not self.is_process():
             return
 
@@ -492,13 +499,31 @@ def calculate_ranks(_modules):
         for (head, tail) in nx.bfs_edges(_g, node):
             tail.rank = max(tail.rank, head.rank + 1)
 
+def scrub_dict(d):
+    new_dict = {}
+    for k, v in d.items():
+        if isinstance(v, dict):
+            v = scrub_dict(v)
+        if isinstance(v, list):
+            v = scrub_list(v)
+        if not v in (u'', None, {}, []):
+            new_dict[k] = v
+    return new_dict
+
+def scrub_list(d):
+    scrubbed_list = []
+    for i in d:
+        if isinstance(i, dict):
+            i = scrub_dict(i)
+        scrubbed_list.append(i)
+    return scrubbed_list
 
 def save_modules(_modules, _module_by_name):
     print(f"{Fore.YELLOW}Saving yaml")
     _export = []
     for _module in _modules:
         _module.deresolve_dependencies()
-        _export.append(vars(_module))
+        _export.append(scrub_dict(vars(_module)))
 
     with open("project-meta.yml", 'w') as yaml_file:
         try:

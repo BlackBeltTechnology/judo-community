@@ -90,3 +90,7 @@
 	path = judo-misc-p2
 	url = git@github.com:BlackBeltTechnology/judo-misc-p2.git
 	branch = develop
+[submodule "judo-meta-expression-psm"]
+	path = judo-meta-expression-psm
+	url = git@github.com:BlackBeltTechnology/judo-meta-expression-psm.git
+	branch = develop
