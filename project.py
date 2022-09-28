@@ -811,7 +811,7 @@ def build_snapshot(_modules, _process_info, _module_by_name):
         ", ".join(map(lambda _m: _m.name, _modules_to_build))) + "\n")
 
     _version_args = []
-    for _module in _available_modules.difference(_ignored_modules) :
+    for _module in _modules_to_build:
         _version_args.append(_module.property + "=" + current_snapshot_version(_module))
 
     print(f"{Fore.YELLOW}Versions override: {Fore.GREEN}" + f"{Fore.YELLOW}, {Fore.GREEN}".join(_version_args) + "\n")
