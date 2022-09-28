@@ -825,6 +825,10 @@ def build_snapshot(_modules, _process_info, _module_by_name):
         _process_info[_module] = {"status": "RUNNING"}
 
         if _module.p2 and 'target' in _module.p2.keys():
+            if not 'releaselocations' in _module.p2.keys():
+                raise SystemExit(f"\n{Fore.RED}Error when building {_module.name}. `releaselocations` not defined. "
+                                 f"To retry, run {_retry_command} -bc {_module.name}")
+
             with open(os.path.abspath(os.getcwd() + "/" + _module.path + "/" + _module.p2['releaselocations'])) as f:
                 _releaseLocs = {k: v for _line in filter(str.rstrip, f) for (k, v) in [_line.strip().split(None, 1)]}
 
@@ -832,9 +836,13 @@ def build_snapshot(_modules, _process_info, _module_by_name):
             for _dependency_module in _module.dependencies:
                 _locations_key = _dependency_module.name + "-location"
                 _version = current_pom_version(_module, _dependency_module)
+
+                if not _version:
+                    raise SystemExit(f"\n{Fore.RED}Error when building {_module.name}. Dependency {_dependency_module.name} version not found. "
+                                     f"To retry, run {_retry_command} -bc {_module.name}")
                 _value = None
 
-                if _dependency_module in _available_modules:
+                if _dependency_module in _available_modules and _dependency_module.p2:
                     _value = "file:" + os.path.abspath(os.getcwd() + "/" + _dependency_module.path + "/" + _dependency_module.p2['localsite'])
                 elif _locations_key in _releaseLocs.keys():
                     _value = _releaseLocs[_locations_key]
