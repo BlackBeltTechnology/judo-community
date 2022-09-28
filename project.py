@@ -82,18 +82,24 @@ You can do the fetching and the updating in one step:
 
 == Execute build locally with module and modules depending on it recursively to snapshot version
 
-Calling the script with the -ss option will select the base module of build.
-By default it starts a build from the given module up to the topmost module.
-With the -bp2 argument it will build locally all projects which creates p2 sites (have p2site script tag), it
-is necessary,  because local build will switch the the resolution to local and have to be able to resolve all
-dependencies from local. You can also build all these modules:
+Calling the script with the -bs option will execute a local build with SNAPSHOT version. The other modules
+will use the versions is defined in their pom.xml
 
-    ./project.py -bp2 -ss <module_name> -bl
+    ./project.py -bs
 
-If the build is failing somewhere, after fixing the issue you can continue (cannot build 
-dependent p2, because it will not change):
+It starts a build for all modules which is not virtual or ignored by default.
+With the -bm switch the modules where the build starts from can be defined. In that case
+the defined modules and all dependent modules starts to build.
+To ignore specific modules, use -bi switch.
 
-    ./project.py -ss <module_name> -bl <module_to_continue_from>
+If the build is failing somewhere, after fixing the issue you can continue
+
+    ./project.py -bs -bc <module_to_continue_from>
+
+To start a build fromn judo-meta-jsl, type
+
+    ./project.py -bs -bm judo-meta-jsl
+
 
 = Releasing using the script
 Always release from a separate local repository, not your working copy.
@@ -128,7 +134,7 @@ When working an HTTP server run, you can see the process:
     http://localhost:8000
 
 """
-
+import json
 import os
 import re
 from argparse import RawDescriptionHelpFormatter, ArgumentParser
@@ -166,23 +172,59 @@ parser: ArgumentParser = argparse.ArgumentParser(formatter_class=RawDescriptionH
                                                  description=textwrap.dedent(
                                                      "Handling module building of Judo NG\n\n" + __doc__))
 
-parser.add_argument("-gh", "--githubtoken", action="store", dest="github_token",
-                    default=os.environ.get('JUDO_GITHUB_TOKEN', ''), help='GitHub token used for authentication')
-parser.add_argument("-jtok", "--jiratoken", action="store", dest="jira_token",
-                    default=os.environ.get('JUDO_JIRA_TOKEN', ''), help='Jira token used for authentication (https://id.atlassian.com/manage-profile/security/api-tokens)')                    
-parser.add_argument("-jusr", "--jirauser", action="store", dest="jira_user",
-                    default=os.environ.get('JUDO_JIRA_USER', ''), help='Jira user used for authentication - same user as token user')                    
-parser.add_argument("-gc", "--gitcheckout", action="store_true", dest="git_checkout", default=False,
-                    help='Fetch / Reset / Checkout branch')
-parser.add_argument("-nogc", "--no-gitcheckout", nargs='*', dest="no_checkout_module",
-                    help="Don't checkout the given modules")
-parser.add_argument("-fv", "--fetchversions", action="store_true", dest="fetch_github_versions", default=False,
-                    help='Fetch last released versions from github')
+general_arg_group = parser.add_argument_group('General arguments')
+general_arg_group.add_argument("-sg", "--graphviz", action="store_true", dest="graphviz", default=False,
+                               help='Save graphviz representation of current state')
+general_arg_group.add_argument("-d", "--dirty", action="store_true", dest="dirty", default=False,
+                               help='Do not update yaml')
+general_arg_group.add_argument("-cu", "--continous", action="store_true", dest="continous_update", default=False,
+                               help='Continuously update / fetch / wait until last level')
+general_arg_group.add_argument("-minr", "--minrank", action="store", dest="min_rank", default=1, type=int,
+                               help='Minimum rank is run')
+general_arg_group.add_argument("-maxr", "--maxrank", action="store", dest="max_rank", default=100, type=int,
+                               help='Maximum rank is run')
+general_arg_group.add_argument("-p", "--project", action="store", dest="project", default=None,
+                               help='Run only on the defined project')
+general_arg_group.add_argument("-relnotes", "--release-notes", dest="relnotes", nargs=1,
+                               metavar=("FROM_HASH[..TO_HASH]"),
+                               help="Generate release notes based on different project-meta.yml versions")
 
-parser.add_argument("-minr", "--minrank", action="store", dest="min_rank", default=1, type=int,
-                    help='Minimum rank is run')
-parser.add_argument("-maxr", "--maxrank", action="store", dest="max_rank", default=100, type=int,
-                    help='Maximum rank is run')
+# parser.add_argument("-ss", "--snapshots", nargs='*', dest="switch_to_snapshots",
+#                    help="Switch to snapshot dependencies starting from the given module(s). If not given all modules is building.")
+# parser.add_argument("-bl", "--build-local", dest="build_local", metavar='CONTINUE_FROM', nargs='?', const='False',
+#                    help="Build updated modules locally")
+# parser.add_argument("-bp2", "--build-local-p2", action="store_true", dest="build_local_p2", default=False,
+#                    help='Build p2 repository for local build')
+
+localbuild_arg_group = parser.add_argument_group('Local build control arguments')
+localbuild_arg_group.add_argument("-bs", "--build-snapshot", dest="build_snapshot", action='store_true', default=False,
+                                  help="Build modules")
+localbuild_arg_group.add_argument("-bi", "--build-ignore", dest="build_modules_ignored", metavar='MODULE...',
+                                  nargs="*",
+                                  help="Ignore given module(s)")
+localbuild_arg_group.add_argument("-bm", "--build-modules", dest="build_modules",
+                                  metavar='MODULE...', nargs="*",
+                                  help="Build the given module(s) and ascendants")
+localbuild_arg_group.add_argument("-bc", "--build-continue-from", dest="continue_module",
+                                  metavar='MODULE', nargs=1,
+                                  help="Retry build from the given module")
+
+git_arg_group = parser.add_argument_group('GIT control arguments')
+git_arg_group.add_argument("-gc", "--gitcheckout", action="store_true", dest="git_checkout", default=False,
+                           help='Fetch / Reset / Checkout branch')
+git_arg_group.add_argument("-nogc", "--no-gitcheckout", nargs='*', dest="no_checkout_module",
+                           help="Don't checkout the given modules")
+git_arg_group.add_argument("-pu", "--pushupdates", action="store_true", dest="push_updates", default=False,
+                           help='Push updates in projects')
+git_arg_group.add_argument("-noci", "--noci", action="store_true", dest="ci_skip", default=False,
+                           help='Make commit with CI Ignore')
+git_arg_group.add_argument("-us", "--updatesubmodules", action="store_true", dest="update_submodules", default=False,
+                           help='Update submodules branches')
+
+github_arg_group = parser.add_argument_group('GitHub API control arguments')
+github_arg_group.add_argument("-fv", "--fetchversions", action="store_true", dest="fetch_github_versions",
+                              default=False,
+                              help='Fetch last released versions from github')
 
 # parser.add_argument("-wu", "--wait", action="append", dest="wait_formodules", default=[],
 # 	help='Repeated wait for the updated modules version update')
@@ -191,35 +233,25 @@ parser.add_argument("-maxr", "--maxrank", action="store", dest="max_rank", defau
 # parser.add_argument("-wt", "--waittimeout", action="store", dest="wait_timeout", type=int, default=3600,
 # 	help='When the whole repeated wait is time outed')
 
-parser.add_argument("-up", "--updatepom", action="store_true", dest="update_pom", default=False, help='Update pom.xml')
-parser.add_argument("-ump", "--updatemodulepom", nargs=1, dest="update_module_pom", help='Update pom.xml of one module')
-parser.add_argument("-ss", "--snapshots", nargs=1, dest="switch_to_snapshots",
-                    help="Switch to snapshot dependencies starting from the given module")
-parser.add_argument("-bl", "--build-local", dest="build_local", metavar='CONTINUE_FROM', nargs='?', const='False',
-                    help="Build updated modules locally")
-parser.add_argument("-bp2", "--build-local-p2", action="store_true", dest="build_local_p2", default=False,
-                    help='Build p2 repository for local build')
-parser.add_argument("-pu", "--pushupdates", action="store_true", dest="push_updates", default=False,
-                    help='Push updates in projects')
-parser.add_argument("-rp", "--runpostchangescripts", action="store_true", dest="run_postchangescripts", default=False,
-                    help='Run postchange script without version update')
-parser.add_argument("-noci", "--noci", action="store_true", dest="ci_skip", default=False,
-                    help='Make commit with CI Ignore')
-parser.add_argument("-us", "--updatesubmodules", action="store_true", dest="update_submodules", default=False,
-                    help='Update submodules branches')
+pom_arg_group = parser.add_argument_group('Maven POM control arguments')
+pom_arg_group.add_argument("-up", "--updatepom", action="store_true", dest="update_pom", default=False,
+                           help='Update pom.xml')
+pom_arg_group.add_argument("-ump", "--updatemodulepom", nargs=1, dest="update_module_pom",
+                           help='Update pom.xml of one module')
+pom_arg_group.add_argument("-rp", "--runpostchangescripts", action="store_true", dest="run_postchangescripts",
+                           default=False,
+                           help='Run postchange script without version update')
 
-parser.add_argument("-sg", "--graphviz", action="store_true", dest="graphviz", default=False,
-                    help='Save graphviz representation of current state')
-
-parser.add_argument("-d", "--dirty", action="store", dest="dirty", default=False, help='Do not update yaml')
-
-parser.add_argument("-cu", "--continous", action="store_true", dest="continous_update", default=False,
-                    help='Continuously update / fetch / wait until last level')
-
-parser.add_argument("-p", "--project", action="store", dest="project", default=None,
-                    help='Run only on the defined project')
-
-parser.add_argument("-relnotes", "--release-notes", dest="relnotes", nargs=1, metavar=("FROM_HASH[..TO_HASH]"), help="Generate release notes based on different project-meta.yml versions" )
+access_arg_group = parser.add_argument_group('Access settings')
+access_arg_group.add_argument("-gh", "--githubtoken", action="store", dest="github_token",
+                              default=os.environ.get('JUDO_GITHUB_TOKEN', ''),
+                              help='GitHub token used for authentication')
+access_arg_group.add_argument("-jtok", "--jiratoken", action="store", dest="jira_token",
+                              default=os.environ.get('JUDO_JIRA_TOKEN', ''),
+                              help='Jira token used for authentication (https://id.atlassian.com/manage-profile/security/api-tokens)')
+access_arg_group.add_argument("-jusr", "--jirauser", action="store", dest="jira_user",
+                              default=os.environ.get('JUDO_JIRA_USER', ''),
+                              help='Jira user used for authentication - same user as token user')
 
 args = parser.parse_args()
 
@@ -295,9 +327,9 @@ class Module(object):
         if 'afterlocalbuild' in init_dict:
             self.afterlocalbuild = init_dict['afterlocalbuild']
 
-        self.buildp2site = []
-        if 'buildp2site' in init_dict:
-            self.buildp2site = init_dict['buildp2site']
+        self.p2 = {}
+        if 'p2' in init_dict:
+            self.p2 = init_dict['p2']
 
         self.ignored = False
         if 'ignored' in init_dict:
@@ -357,12 +389,11 @@ class Module(object):
                         print(
                             f"{Fore.YELLOW}Updating version of {Fore.GREEN}{self.name}{Fore.YELLOW}: "
                             f"{Fore.GREEN}{self.version} {Fore.YELLOW}=>{Fore.GREEN} {ver}")
-                        self.version = ver                    
+                        self.version = ver
                         return True
                     else:
                         return False
         return False
-
 
     def update_dependency_versions_in_pom(self, write_pom=False):
         if self.path is None:
@@ -402,13 +433,6 @@ class Module(object):
         _currentDir = os.getcwd() + '/' + self.path
         for postchangescript in self.afterversionchange:
             if call(postchangescript, shell=True, cwd=_currentDir) != 0:
-                return False
-        return True
-
-    def call_buildp2sitescripts(self):
-        _currentDir = os.getcwd() + '/' + self.path
-        for buildp2sitescript in self.buildp2site:
-            if call(buildp2sitescript, shell=True, cwd=_currentDir) != 0:
                 return False
         return True
 
@@ -499,6 +523,7 @@ def calculate_ranks(_modules):
         for (head, tail) in nx.bfs_edges(_g, node):
             tail.rank = max(tail.rank, head.rank + 1)
 
+
 def scrub_dict(d):
     new_dict = {}
     for k, v in d.items():
@@ -510,6 +535,7 @@ def scrub_dict(d):
             new_dict[k] = v
     return new_dict
 
+
 def scrub_list(d):
     scrubbed_list = []
     for i in d:
@@ -517,6 +543,7 @@ def scrub_list(d):
             i = scrub_dict(i)
         scrubbed_list.append(i)
     return scrubbed_list
+
 
 def save_modules(_modules, _module_by_name):
     print(f"{Fore.YELLOW}Saving yaml")
@@ -618,7 +645,7 @@ def wait_for_modules_to_release(_process_info, _wait_for=None):
     while len(_wait_for) > 0:
         time.sleep(15)
         for _module in _wait_for:
-            _process_info[_module] = {"status": "RUNNING"}
+            _process_info[_module] = {"stat us": "RUNNING"}
             print(
                 f"{Fore.YELLOW}Checking latest release for {Fore.GREEN}{_module.name}{Fore.YELLOW} in branch: "
                 f"{Fore.GREEN}{_module.branch}")
@@ -695,11 +722,24 @@ def current_snapshot_version(_module):
 
     return _version
 
+def current_pom_version(_module, _dep_module):
+    pom = parse(open(_module.path + "/pom.xml"), parser=XMLParser(target=CommentedTreeBuilder()))
+    root = pom.getroot()
+    properties = list(root.find(pom_namespace + 'properties'))
+    _version = None
+    for e in properties:
+        if e.tag == pom_namespace + _dep_module.property:
+            _version = e.text
+            break
+
+    return _version
+
 
 def build_module(_module, arguments=None):
     if arguments is None:
         arguments = []
-    print(f"Building module {_module.path}")
+    print(f"\n{Fore.YELLOW}================================================================================{Style.RESET_ALL}")
+    print(f"\n{Fore.YELLOW}Building module{Style.RESET_ALL} {Fore.RED}{_module.path}{Style.RESET_ALL}")
     # proc = subprocess.Popen(["mvn", "clean", "install"] + args +
     # ["-f", f"{module.path}/pom.xml"], stdout=subprocess.PIPE)
     # for line in proc.stdout:
@@ -712,7 +752,8 @@ def build_module(_module, arguments=None):
     if not _module.call_beforelocalbuildscripts():
         return False
     cmd = "mvn clean install " + (" ".join(list(map(lambda x: f"-D{x}", arguments))))
-    print("Calling maven: " + cmd)
+    print(f"Calling maven: \n{Fore.MAGENTA}{cmd}{Style.RESET_ALL}\n")
+    print(f"\n{Fore.YELLOW}================================================================================{Style.RESET_ALL}")
     if call(cmd, shell=True, cwd=_currentDir) != 0:
         return False
     if not _module.call_afterlocalbuildscripts():
@@ -720,66 +761,99 @@ def build_module(_module, arguments=None):
     return True
 
 
-def switch_to_snapshots(_modules, _process_info, _module_name, _module_by_name):
-    _base_module = _module_by_name[_module_name]
-    _version = current_snapshot_version(_base_module)
-    print(f"{Fore.YELLOW}Switch to version {Fore.GREEN}{_version}{Fore.YELLOW} of {Fore.GREEN}{_module_name}")
-    _base_module.version = _version
-    _start_module_name = _module_name
-    if args.build_local and args.build_local != 'False':
-        _start_module_name = args.build_local
+def build_snapshot(_modules, _process_info, _module_by_name):
+    _available_modules = set(filter(lambda _m: not _m.virtual and not _m.ignored, _modules))
+    _ignored_modules = set()
+    if not args.build_modules_ignored is None:
+        for _module_name in args.build_modules_ignored:
+            _module = _module_by_name[_module_name]
+            if _module is None:
+                raise SystemExit(f"\n{Fore.RED}No module name is found {_module_name}.")
+            if _module.virtual:
+                raise SystemExit(f"\n{Fore.RED}Virtual module cannot be used in snapshot mode: {_module_name}.")
+            _ignored_modules.add(_module)
 
-    # _modules_in_order = sorted(filter(lambda m: not m.ignored, modules), key=lambda m: (m.rank, m.name))
-    _modules_in_order = sorted(modules, key=lambda m: (m.rank, m.name))
+    _retry_command = "./project.py -bs "
 
-    modules_to_build = []
+    if len(_ignored_modules) > 0:
+        print(f"{Fore.YELLOW}Modules ignored:{Style.RESET_ALL} " + (
+            ", ".join(map(lambda _m: _m.name, list(_ignored_modules)))) + "\n")
+        _retry_command = _retry_command + "-bi "
+        for _module in _ignored_modules:
+            _retry_command = _retry_command + _module.name + " "
 
-    build_from_index = list(map(lambda m: m.name, _modules_in_order)).index(_start_module_name)
+    _root_modules = set()
+    if not args.build_modules is None:
+        for _module_name in args.build_modules:
+            _module = _module_by_name[_module_name]
+            if _module is None:
+                raise SystemExit(f"\n{Fore.RED}No module name is found {_module_name}.")
+            if _module.virtual:
+                raise SystemExit(f"\n{Fore.RED}Virtual module cannot be used in snapshot mode: {_module_name}.")
+            _root_modules.add(_module)
 
-    # modules_to_build = _modules_in_order[build_from_index:]
-    modules_to_build = list(filter(lambda m: not m.ignored, _modules_in_order[build_from_index:]))
+    _modules_to_build = set(_available_modules)
 
-    print(f"{Fore.YELLOW}Modules to build: " + f"{Fore.YELLOW}, ".join(
-        map(lambda m: f"{Fore.GREEN}{m.name}", modules_to_build)) + "\n")
+    if len(_root_modules) > 0:
+        _retry_command = _retry_command + "-bm "
+        _modules_to_build = set(_root_modules)
+        print(f"{Fore.YELLOW}Root modules:{Style.RESET_ALL} " + (
+            ", ".join(map(lambda _m: _m.name, list(_root_modules)))))
+        for _module in _root_modules:
+            print(f"{Fore.BLUE}{_module.name} {Style.RESET_ALL} ancestors added: " + (
+                ", ".join(
+                    map(lambda _m: _m.name, ancestors(calculate_reduced_graph(_available_modules), _module)))))
+            _modules_to_build = _modules_to_build.union(set(ancestors(calculate_reduced_graph(_available_modules), _module)))
+            _retry_command = _retry_command + _module.name + " "
+
+    _modules_to_build = sorted(_modules_to_build.difference(_ignored_modules), key=lambda _m: (_m.rank, _m.name))
+    print(f"\n{Fore.YELLOW}Modules to build:{Style.RESET_ALL} " + (
+        ", ".join(map(lambda _m: _m.name, _modules_to_build))) + "\n")
 
     _version_args = []
-    for _module in modules_to_build:
+    for _module in _available_modules.difference(_ignored_modules) :
         _version_args.append(_module.property + "=" + current_snapshot_version(_module))
 
     print(f"{Fore.YELLOW}Versions override: {Fore.GREEN}" + f"{Fore.YELLOW}, {Fore.GREEN}".join(_version_args) + "\n")
-    for _module in modules_to_build:
-        _process_info[_module] = {"status": "WAITING"}
 
-    if build_from_index and args.build_local_p2:
-        all_modules_in_order = sorted(modules, key=lambda m: (m.rank, m.name))
-        build_p2_from_index = list(map(lambda m: m.name, all_modules_in_order)).index(_module_name)
-        modules_to_p2_build = list(
-            filter(lambda m: m.buildp2site and list(set(ancestors(calculate_graph(_modules), m))
-                                                    & set(modules_to_build)),
-                   all_modules_in_order[:build_p2_from_index]))
+    if args.continue_module:
+        _start_module_name = args.continue_module[0]
+        _build_from_index = list(map(lambda _m: _m.name, _modules_to_build)).index(_start_module_name)
+        _modules_to_build = list(_modules_to_build[_build_from_index:])
 
-        # print(f"{Fore.YELLOW}All required P2 modules:{Style.RESET_ALL}: " + ",
-        # ".join(map(lambda m : m.name, modules_to_p2_build)))
-        print(f"{Fore.YELLOW}Required P2 Modules to build:{Style.RESET_ALL} " + (
-            ", ".join(map(lambda m: m.name, modules_to_p2_build))) + "\n")
-        for _module in modules_to_p2_build:
-            _process_info[_module] = {"status": "WAITING"}
-
-        for _module in modules_to_p2_build:
-            print(f"{Fore.YELLOW}Build required P2 module:{Style.RESET_ALL} {_module.name}")
-            _process_info[_module] = {"status": "RUNNING"}
-            if not _module.call_buildp2sitescripts():
-                raise SystemExit(f"\n{Fore.RED}Error when executing P2 build script on {_module.name}.")
-            _process_info[_module] = {"status": "OK"}
-
-    if args.build_local and args.build_local != 'False':
-        print(f"{Fore.YELLOW}Continuing from {args.build_local}")
-
-    for _module in modules_to_build:
+    for _module in _modules_to_build:
         _process_info[_module] = {"status": "RUNNING"}
+
+        if _module.p2 and 'target' in _module.p2.keys():
+            with open(os.path.abspath(os.getcwd() + "/" + _module.path + "/" + _module.p2['releaselocations'])) as f:
+                _releaseLocs = {k: v for _line in filter(str.rstrip, f) for (k, v) in [_line.strip().split(None, 1)]}
+
+            _locations = dict(_releaseLocs)
+            for _dependency_module in _module.dependencies:
+                _locations_key = _dependency_module.name + "-location"
+                _version = current_pom_version(_module, _dependency_module)
+                _value = None
+
+                if _dependency_module in _available_modules:
+                    _value = "file:" + os.path.abspath(os.getcwd() + "/" + _dependency_module.path + "/" + _dependency_module.p2['localsite'])
+                elif _locations_key in _releaseLocs.keys():
+                    _value = _releaseLocs[_locations_key]
+
+                if _value:
+                    _locations[_locations_key] = _value.replace("${" + _dependency_module.property + "}", _version)
+
+            print("P2 Locations: \n" + json.dumps(_locations, indent=4))
+
+            with open(os.path.abspath(os.getcwd() + "/" + _module.path + "/" + _module.p2['template'])) as _tf:
+                _template = "".join(_tf.readlines()).replace("${build.timestamp.millis}", str(int(time.time() * 1000)))
+                for _loc in _locations.keys():
+                    _template = _template.replace("${" + _loc + "}", _locations[_loc])
+                with open(os.path.abspath(os.getcwd() + "/" + _module.path + "/" + _module.p2['target']), 'w', encoding='utf-8') as _out:
+                    _out.write(_template)
+
         if not build_module(_module, _version_args):
-            raise SystemExit(f"\n{Fore.RED}Error when building {_module.name}. "
-                             f"To retry, run project.py -ss {_base_module.name} -bl {_module.name}")
+           raise SystemExit(f"\n{Fore.RED}Error when building {_module.name}. "
+                            f"To retry, run {_retry_command} -bc {_module.name}")
         _process_info[_module] = {"status": "OK"}
 
 
@@ -847,8 +921,8 @@ if not args.dirty:
     save_modules(modules, module_by_name)
 
 # =============================== Switch to snapshot versions from the given module
-if args.switch_to_snapshots:
-    switch_to_snapshots(modules, process_info, args.switch_to_snapshots[0], module_by_name)
+if args.build_snapshot:
+    build_snapshot(modules, process_info, module_by_name)
 
 # =============================== Generating Graphviz
 if args.graphviz:
@@ -880,7 +954,7 @@ if args.update_submodules:
             call("git stash", shell=True, cwd=currentDir + "/" + module.path)
             retcode = call("git checkout " + module.branch, shell=True, cwd=currentDir + "/" + module.path)
             if retcode != 0:
-                call("git checkout -b " + module.branch , shell=True, cwd=currentDir + "/" + module.path)
+                call("git checkout -b " + module.branch, shell=True, cwd=currentDir + "/" + module.path)
             call("git pull", shell=True, cwd=currentDir + "/" + module.path)
 
 # ================================ Checking for updates
@@ -903,18 +977,18 @@ if args.relnotes:
     currentDir = os.getcwd()
     hashes = args.relnotes[0].split("..")
     if (len(hashes) == 2):
-        current_file_name = "project-meta-"+hashes[1]+".yml"
-        call("git show " + hashes[1] + ":project-meta.yml", shell = True, stdout=open(current_file_name, "w"))
+        current_file_name = "project-meta-" + hashes[1] + ".yml"
+        call("git show " + hashes[1] + ":project-meta.yml", shell=True, stdout=open(current_file_name, "w"))
     else:
         current_file_name = "project-meta-current.yml"
-        shutil.copyfile("project-meta.yml", current_file_name)        
+        shutil.copyfile("project-meta.yml", current_file_name)
     current_modules_by_name = {}
     current_modules = []
     for item in load_modules(current_file_name):
         process_module(item, current_modules, current_modules_by_name)
 
-    previous_file_name = "project-meta-"+hashes[0]+".yml"
-    call("git show " + hashes[0] + ":project-meta.yml", shell = True, stdout=open(previous_file_name, "w"))
+    previous_file_name = "project-meta-" + hashes[0] + ".yml"
+    call("git show " + hashes[0] + ":project-meta.yml", shell=True, stdout=open(previous_file_name, "w"))
     previous_modules_by_name = {}
     previous_modules = []
     for item in load_modules(previous_file_name):
@@ -926,7 +1000,7 @@ if args.relnotes:
             module_versions[module.name] = (module.version, previous_modules_by_name[module.name].version)
         else:
             new_modules.append(module)
-    print("New modules:" )
+    print("New modules:")
     print(new_modules)
 
     issues = set()
@@ -938,41 +1012,41 @@ if args.relnotes:
                 from_tag = ''
                 to_tag = ''
                 try:
-                   from_tag = module_versions[module.name][1]
-                   command = f"git rev-parse -q --verify \"refs/tags/{from_tag}\" >/dev/null"
-                   check_output(command, shell = True, cwd = currentDir + "/" + module.path)
+                    from_tag = module_versions[module.name][1]
+                    command = f"git rev-parse -q --verify \"refs/tags/{from_tag}\" >/dev/null"
+                    check_output(command, shell=True, cwd=currentDir + "/" + module.path)
                 except:
-                  try:
-                     from_tag = "v" + module_versions[module.name][1]
-                     command = f"git rev-parse -q --verify \"refs/tags/{from_tag}\" >/dev/null"
-                     check_output(command, shell = True, cwd = currentDir + "/" + module.path)
-                  except:
-                     print("Version tag: {module_versions[module.name][1]} not found for {module.name}")
+                    try:
+                        from_tag = "v" + module_versions[module.name][1]
+                        command = f"git rev-parse -q --verify \"refs/tags/{from_tag}\" >/dev/null"
+                        check_output(command, shell=True, cwd=currentDir + "/" + module.path)
+                    except:
+                        print("Version tag: {module_versions[module.name][1]} not found for {module.name}")
 
                 try:
-                   to_tag = module_versions[module.name][0]
-                   command = f"git rev-parse -q --verify \"refs/tags/{to_tag}\" >/dev/null"
-                   check_output(command, shell = True, cwd = currentDir + "/" + module.path)
+                    to_tag = module_versions[module.name][0]
+                    command = f"git rev-parse -q --verify \"refs/tags/{to_tag}\" >/dev/null"
+                    check_output(command, shell=True, cwd=currentDir + "/" + module.path)
                 except:
-                  try:
-                     to_tag = "v" + module_versions[module.name][0]
-                     command = f"git rev-parse -q --verify \"refs/tags/{to_tag}\" >/dev/null"
-                     check_output(command, shell = True, cwd = currentDir + "/" + module.path)
-                  except:
-                     print("Version tag: {module_versions[module.name][1]} not found for {module.name}")
+                    try:
+                        to_tag = "v" + module_versions[module.name][0]
+                        command = f"git rev-parse -q --verify \"refs/tags/{to_tag}\" >/dev/null"
+                        check_output(command, shell=True, cwd=currentDir + "/" + module.path)
+                    except:
+                        print("Version tag: {module_versions[module.name][1]} not found for {module.name}")
 
-                if from_tag and to_tag:  
-                  command = f"git log --pretty=oneline {from_tag}..{to_tag}"
-                  log_output = check_output(command, shell = True, cwd = currentDir + "/" + module.path)
+                if from_tag and to_tag:
+                    command = f"git log --pretty=oneline {from_tag}..{to_tag}"
+                    log_output = check_output(command, shell=True, cwd=currentDir + "/" + module.path)
 
-                  for line in log_output.splitlines():
-                      m = re.search('JNG-\d+', line.decode())
-                      if m:
-                          issues.add(m.group())
+                    for line in log_output.splitlines():
+                        m = re.search('JNG-\d+', line.decode())
+                        if m:
+                            issues.add(m.group())
 
     for module in new_modules:
         command = f"git log --pretty=oneline"
-        log_output = check_output(command, shell = True, cwd = currentDir + "/" + module.path)
+        log_output = check_output(command, shell=True, cwd=currentDir + "/" + module.path)
         for line in log_output.splitlines():
             m = re.search('JNG-\d+', line.decode())
             if m:
@@ -982,8 +1056,7 @@ if args.relnotes:
     jira = Jira(
         url='https://blackbelt.atlassian.net', username=args.jira_user, password=args.jira_token)
 
-
-    output =  "Versions\n"
+    output = "Versions\n"
     output += "--------\n"
     output += "\n"
     output += "|=======================\n"
@@ -1039,9 +1112,9 @@ if args.relnotes:
     output += "|=======================\n"
     output += "| Name | GitHUB | Version\n"
     for module in modules:
-       output += f"| {module.name} | https://github.com/{module.github}[{module.github}] | https://github.com/{module.github}/releases/tag/v{module.version}[{module.version}^]\n"
+        output += f"| {module.name} | https://github.com/{module.github}[{module.github}] | https://github.com/{module.github}/releases/tag/v{module.version}[{module.version}^]\n"
     output += f"|=======================\n"
-    
+
     output += "Changelog\n"
     output += "---------\n"
     output += "\n"
@@ -1049,7 +1122,7 @@ if args.relnotes:
     output += "\n"
     output += "|=======================\n"
     output += "| ID | Type | Summary | Status | Notes\n"
-    
+
     # For JIRA API see https://atlassian-python-api.readthedocs.io/jira.html
     for issueNumber in sorted(issues):
         print(f"Querying JIRA for {issueNumber}")
@@ -1058,22 +1131,20 @@ if args.relnotes:
             try:
                 noteSubtasksResult = jira.jql(f"parent = {issueNumber} AND labels = Note", expand="renderedFields")
                 for issue in noteSubtasksResult['issues']:
-                    description = issue['renderedFields']['description'] # Get HTML formatted content
+                    description = issue['renderedFields']['description']  # Get HTML formatted content
                     note += f"{description}<br>"
             except BaseException as err:
-                print(f"An exception occurred on fetching  subtasks of {issueNumber} - {err=}, {type(err)=}")    
-	        
+                print(f"An exception occurred on fetching  subtasks of {issueNumber} - {err=}, {type(err)=}")
+
             issue = jira.issue(issueNumber, 'summary, status, issuetype')
             issuetype = issue['fields']['issuetype']['name']
             summary = issue['fields']['summary']
             status = issue['fields']['status']['name']
             output += f"| https://blackbelt.atlassian.net/browse/{issueNumber}[{issueNumber}^] | {issuetype} | {summary} | {status} | {note}\n"
         except BaseException as err:
-            print(f"An exception occurred on fetching {issueNumber} - {err=}, {type(err)=}")    
+            print(f"An exception occurred on fetching {issueNumber} - {err=}, {type(err)=}")
     output += "|=======================\n"
-
 
     relnotes_file = open("relnotes_" + now.strftime("%Y_%m_%d") + ".adoc", "w")
     relnotes_file.write(output)
     relnotes_file.close()
-    

@@ -71,94 +71,12 @@
   version: 1.1.0.20220807_065738_525bb031_develop
   virtual: true
 - branch: master
-  github: BlackbeltTechnology/karaf-features-bouncycastle
+  github: BlackbeltTechnology/karaf-features
   ignored: false
-  name: karaf-features-bouncycastle
-  property: bouncycastle-karaf-features-version
+  name: karaf-features
+  property: karaf-features-version
   rank: 1
-  url: git@github.com:BlackbeltTechnology/karaf-features-bouncycastle.git
-  version: 1.61.2
-  virtual: true
-- branch: master
-  github: BlackbeltTechnology/karaf-features-tinybundles
-  ignored: false
-  name: karaf-features-tinybundles
-  property: tinybundles-karaf-features-version
-  rank: 1
-  url: git@github.com:BlackbeltTechnology/karaf-features-tinybundles.git
-  version: 1.0.0
-  virtual: true
-- branch: master
-  github: BlackbeltTechnology/karaf-features-google
-  ignored: true
-  name: karaf-features-google
-  property: google-karaf-features-version
-  rank: 1
-  url: git@github.com:BlackbeltTechnology/karaf-features-google.git
-  version: 1.0.7
-  virtual: true
-- branch: master
-  github: BlackbeltTechnology/karaf-features-eclipse-emf
-  ignored: true
-  name: karaf-features-eclipse-emf
-  path: packages/karaf-features-eclipse-emf
-  property: eclipse-emf-karaf-features-version
-  rank: 1
-  url: git@github.com:BlackbeltTechnology/karaf-features-eclipse-emf.git
-  version: 1.0.1
-  virtual: true
-- branch: master
-  github: BlackbeltTechnology/karaf-features-eclipse-epsilon
-  ignored: false
-  name: karaf-features-eclipse-epsilon
-  property: eclipse-epsilon-karaf-features-version
-  rank: 1
-  url: git@github.com:BlackbeltTechnology/karaf-features-eclipse-epsilon.git
-  version: 1.0.6
-  virtual: true
-- branch: master
-  github: BlackbeltTechnology/karaf-features-antlr
-  ignored: false
-  name: karaf-features-antlr
-  property: antlr-karaf-features-version
-  rank: 1
-  url: git@github.com:BlackbeltTechnology/karaf-features-antlr.git
-  version: 1.0.1
-  virtual: true
-- branch: master
-  github: BlackbeltTechnology/karaf-features-apache-commons
-  ignored: false
-  name: karaf-features-apache-commons
-  property: apache-commons-karaf-features-version
-  rank: 1
-  url: git@github.com:BlackbeltTechnology/karaf-features-apache-commons.git
-  version: 1.0.6
-  virtual: true
-- branch: master
-  github: BlackbeltTechnology/karaf-features-apache-poi
-  ignored: false
-  name: karaf-features-apache-poi
-  property: apache-poi-karaf-features-version
-  rank: 1
-  url: git@github.com:BlackbeltTechnology/karaf-features-apache-poi.git
-  version: 1.0.4
-  virtual: true
-- branch: master
-  github: BlackbeltTechnology/karaf-features-apache-httpclient
-  ignored: false
-  name: karaf-features-apache-httpclient
-  property: apache-httpclient-karaf-features-version
-  rank: 1
-  url: git@github.com:BlackbeltTechnology/karaf-features-apache-httpclient.git
-  version: 1.0.0
-  virtual: true
-- branch: master
-  github: BlackbeltTechnology/karaf-features-eclipse-xtext
-  ignored: false
-  name: karaf-features-eclipse-xtext
-  property: eclipse-xtext-karaf-features-version
-  rank: 1
-  url: git@github.com:BlackbeltTechnology/karaf-features-eclipse-xtext.git
+  url: git@github.com:BlackbeltTechnology/karaf-features.git
   version: 1.0.2
   virtual: true
 - branch: develop
@@ -192,6 +110,8 @@
   github: BlackbeltTechnology/judo-misc-p2
   ignored: false
   name: judo-misc-p2
+  p2:
+    localsite: /target/repository
   path: judo-misc-p2
   property: judo-misc-p2-version
   rank: 1
@@ -235,30 +155,23 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  beforelocalbuild:
-  - mvn install -DlocalP2 -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   branch: develop
-  buildp2site:
-  - mvn clean package -Dmaven.test.skip=true
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
   - emf-genmodel-generator
   - judo-genmodel-generator
-  - karaf-features-google
-  - karaf-features-bouncycastle
-  - karaf-features-apache-commons
-  - karaf-features-apache-httpclient
-  - karaf-features-apache-poi
-  - karaf-features-antlr
-  - karaf-features-eclipse-emf
-  - karaf-features-eclipse-epsilon
-  - karaf-features-tinybundles
+  - karaf-features
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-asm
   ignored: false
   name: judo-meta-asm
+  p2:
+    localsite: /site/target/repository
+    releaselocations: /targetdefinition/p2-remote.properties
+    target: /targetdefinition/hu.blackbelt.judo.meta.asm.targetdefinition.target
+    template: /targetdefinition/template/hu.blackbelt.judo.meta.asm.targetdefinition.target
   path: judo-meta-asm
   property: judo-meta-asm-version
   rank: 2
@@ -270,11 +183,7 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  beforelocalbuild:
-  - mvn install -DlocalP2 -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   branch: develop
-  buildp2site:
-  - mvn clean package -Dmaven.test.skip=true
   dependencies:
   - judo-meta-jql
   - judo-meta-measure
@@ -282,21 +191,17 @@
   - epsilon-runtime-eclipse
   - emf-genmodel-generator
   - judo-genmodel-generator
-  - karaf-features-google
-  - karaf-features-bouncycastle
-  - karaf-features-apache-commons
-  - karaf-features-apache-httpclient
-  - karaf-features-apache-poi
-  - karaf-features-antlr
-  - karaf-features-eclipse-emf
-  - karaf-features-eclipse-epsilon
-  - karaf-features-eclipse-xtext
-  - karaf-features-tinybundles
+  - karaf-features
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-expression
   ignored: false
   name: judo-meta-expression
+  p2:
+    localsite: /site/target/repository
+    releaselocations: /targetdefinition/p2-remote.properties
+    target: /targetdefinition/hu.blackbelt.judo.meta.expression.targetdefinition.target
+    template: /targetdefinition/template/hu.blackbelt.judo.meta.expression.targetdefinition.target
   path: judo-meta-expression
   property: judo-meta-expression-version
   rank: 3
@@ -308,19 +213,24 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  beforelocalbuild:
-  - mvn install -DlocalP2 -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   branch: develop
-  buildp2site:
-  - mvn clean package -Dmaven.test.skip=true
   dependencies:
   - judo-meta-asm
   - judo-meta-expression
   - judo-meta-jql
   - judo-meta-measure
+  - epsilon-runtime-eclipse
+  - emf-genmodel-generator
+  - judo-genmodel-generator
+  - judo-epp-common
   github: BlackbeltTechnology/judo-meta-expression-asm
   ignored: false
   name: judo-meta-expression-asm
+  p2:
+    localsite: /site/target/repository
+    releaselocations: /targetdefinition/p2-remote.properties
+    target: /targetdefinition/hu.blackbelt.judo.meta.expression.asm.targetdefinition.target
+    template: /targetdefinition/template/hu.blackbelt.judo.meta.expression.asm.targetdefinition.target
   path: judo-meta-expression-asm
   property: judo-meta-expression-asm-version
   rank: 4
@@ -332,11 +242,7 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  beforelocalbuild:
-  - mvn install -DlocalP2 -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   branch: develop
-  buildp2site:
-  - mvn clean package -Dmaven.test.skip=true
   dependencies:
   - judo-meta-expression
   - judo-meta-psm
@@ -350,6 +256,11 @@
   github: BlackbeltTechnology/judo-meta-expression-psm
   ignored: false
   name: judo-meta-expression-psm
+  p2:
+    localsite: /site/target/repository
+    releaselocations: /targetdefinition/p2-remote.properties
+    target: /targetdefinition/hu.blackbelt.judo.meta.expression.asm.targetdefinition.target
+    template: /targetdefinition/template/hu.blackbelt.judo.meta.expression.asm.targetdefinition.target
   path: judo-meta-expression-psm
   property: judo-meta-expression-psm-version
   rank: 4
@@ -361,27 +272,21 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  beforelocalbuild:
-  - mvn install -DlocalP2 -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   branch: develop
-  buildp2site:
-  - mvn clean package -Dmaven.test.skip=true
   dependencies:
   - emf-genmodel-generator
   - judo-genmodel-generator
-  - karaf-features-google
-  - karaf-features-bouncycastle
-  - karaf-features-apache-commons
-  - karaf-features-apache-httpclient
-  - karaf-features-antlr
-  - karaf-features-eclipse-emf
-  - karaf-features-eclipse-xtext
-  - karaf-features-tinybundles
+  - karaf-features
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-psm-jql
   ignored: false
   name: judo-meta-jql
+  p2:
+    localsite: /site/target/repository
+    releaselocations: /targetdefinition/p2-remote.properties
+    target: /targetdefinition/hu.blackbelt.judo.meta.jql.targetdefinition.target
+    template: /targetdefinition/template/hu.blackbelt.judo.meta.jql.targetdefinition.target
   path: judo-meta-jql
   property: judo-meta-jql-version
   rank: 2
@@ -393,28 +298,22 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  beforelocalbuild:
-  - mvn install -DlocalP2 -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   branch: develop
-  buildp2site:
-  - mvn clean package -Dmaven.test.skip=true
   dependencies:
   - emf-genmodel-generator
   - judo-genmodel-generator
-  - karaf-features-google
-  - karaf-features-bouncycastle
-  - karaf-features-apache-commons
-  - karaf-features-apache-httpclient
-  - karaf-features-antlr
-  - karaf-features-eclipse-emf
-  - karaf-features-eclipse-xtext
-  - karaf-features-tinybundles
+  - karaf-features
   - osgi-utils
   - judo-epp-common
   - judo-misc-p2
   github: BlackbeltTechnology/judo-meta-jsl
   ignored: false
   name: judo-meta-jsl
+  p2:
+    localsite: /site/target/repository
+    releaselocations: /targetdefinition/p2-remote.properties
+    target: /targetdefinition/hu.blackbelt.judo.meta.jsl.targetdefinition.target
+    template: /targetdefinition/template/hu.blackbelt.judo.meta.jsl.targetdefinition.target
   path: judo-meta-jsl
   property: judo-meta-jsl-version
   rank: 2
@@ -426,30 +325,23 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  beforelocalbuild:
-  - mvn install -DlocalP2 -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   branch: develop
-  buildp2site:
-  - mvn clean package -Dmaven.test.skip=true
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
   - emf-genmodel-generator
   - judo-genmodel-generator
-  - karaf-features-google
-  - karaf-features-bouncycastle
-  - karaf-features-apache-commons
-  - karaf-features-apache-httpclient
-  - karaf-features-apache-poi
-  - karaf-features-antlr
-  - karaf-features-eclipse-emf
-  - karaf-features-eclipse-epsilon
-  - karaf-features-tinybundles
+  - karaf-features
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-liquibase
   ignored: false
   name: judo-meta-liquibase
+  p2:
+    localsite: /site/target/repository
+    releaselocations: /targetdefinition/p2-remote.properties
+    target: /targetdefinition/hu.blackbelt.judo.meta.liquibase.targetdefinition.target
+    template: /targetdefinition/template/hu.blackbelt.judo.meta.liquibase.targetdefinition.target
   path: judo-meta-liquibase
   property: judo-meta-liquibase-version
   rank: 2
@@ -461,30 +353,23 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  beforelocalbuild:
-  - mvn install -DlocalP2 -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   branch: develop
-  buildp2site:
-  - mvn clean package -Dmaven.test.skip=true
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
   - emf-genmodel-generator
   - judo-genmodel-generator
-  - karaf-features-google
-  - karaf-features-bouncycastle
-  - karaf-features-apache-commons
-  - karaf-features-apache-httpclient
-  - karaf-features-apache-poi
-  - karaf-features-antlr
-  - karaf-features-eclipse-emf
-  - karaf-features-eclipse-epsilon
-  - karaf-features-tinybundles
+  - karaf-features
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-measure
   ignored: false
   name: judo-meta-measure
+  p2:
+    localsite: /site/target/repository
+    releaselocations: /targetdefinition/p2-remote.properties
+    target: /targetdefinition/hu.blackbelt.judo.meta.measure.targetdefinition.target
+    template: /targetdefinition/template/hu.blackbelt.judo.meta.measure.targetdefinition.target
   path: judo-meta-measure
   property: judo-meta-measure-version
   rank: 2
@@ -496,30 +381,23 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  beforelocalbuild:
-  - mvn install -DlocalP2 -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   branch: develop
-  buildp2site:
-  - mvn clean package -Dmaven.test.skip=true
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
   - emf-genmodel-generator
   - judo-genmodel-generator
-  - karaf-features-google
-  - karaf-features-bouncycastle
-  - karaf-features-apache-commons
-  - karaf-features-apache-httpclient
-  - karaf-features-apache-poi
-  - karaf-features-antlr
-  - karaf-features-eclipse-emf
-  - karaf-features-eclipse-epsilon
-  - karaf-features-tinybundles
+  - karaf-features
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-psm
   ignored: false
   name: judo-meta-psm
+  p2:
+    localsite: /site/target/repository
+    releaselocations: /targetdefinition/p2-remote.properties
+    target: /targetdefinition/hu.blackbelt.judo.meta.psm.targetdefinition.target
+    template: /targetdefinition/template/hu.blackbelt.judo.meta.psm.targetdefinition.target
   path: judo-meta-psm
   property: judo-meta-psm-version
   rank: 2
@@ -531,29 +409,23 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  beforelocalbuild:
-  - mvn install -DlocalP2 -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   branch: develop
-  buildp2site:
-  - mvn clean package -Dmaven.test.skip=true
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
   - emf-genmodel-generator
   - judo-genmodel-generator
-  - karaf-features-google
-  - karaf-features-bouncycastle
-  - karaf-features-apache-commons
-  - karaf-features-apache-httpclient
-  - karaf-features-apache-poi
-  - karaf-features-antlr
-  - karaf-features-eclipse-emf
-  - karaf-features-eclipse-epsilon
-  - karaf-features-tinybundles
+  - karaf-features
   - osgi-utils
+  - judo-epp-common
   github: BlackbeltTechnology/judo-meta-query
   ignored: false
   name: judo-meta-query
+  p2:
+    localsite: /site/target/repository
+    releaselocations: /targetdefinition/p2-remote.properties
+    target: /targetdefinition/hu.blackbelt.judo.meta.query.targetdefinition.target
+    template: /targetdefinition/template/hu.blackbelt.judo.meta.query.targetdefinition.target
   path: judo-meta-query
   property: judo-meta-query-version
   rank: 2
@@ -565,30 +437,24 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  beforelocalbuild:
-  - mvn install -DlocalP2 -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   branch: develop
-  buildp2site:
-  - mvn clean package -Dmaven.test.skip=true
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
   - emf-genmodel-generator
   - judo-genmodel-generator
-  - karaf-features-google
-  - karaf-features-bouncycastle
-  - karaf-features-apache-commons
-  - karaf-features-apache-httpclient
-  - karaf-features-apache-poi
-  - karaf-features-antlr
-  - karaf-features-eclipse-emf
-  - karaf-features-eclipse-epsilon
-  - karaf-features-tinybundles
+  - karaf-features
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-rdbms
   ignored: false
   name: judo-meta-rdbms
+  p2:
+    localsite: /site/target/repository
+    releaselocations: /targetdefinition/p2-remote.properties
+    snapshotlocations: /targetdefinition/p2-local.properties
+    target: /targetdefinition/hu.blackbelt.judo.meta.rdbms.targetdefinition.target
+    template: /targetdefinition/template/hu.blackbelt.judo.meta.rdbms.targetdefinition.target
   path: judo-meta-rdbms
   property: judo-meta-rdbms-version
   rank: 2

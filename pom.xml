@@ -84,11 +84,14 @@
         </license>
     </licenses>
     <modules>
+        <module>judo-misc-p2</module>
         <module>judo-meta-jsl</module>
         <module>judo-meta-psm</module>
         <module>judo-meta-measure</module>
         <module>judo-meta-asm</module>
         <module>judo-meta-expression</module>
+        <module>judo-meta-expression-asm</module>
+        <module>judo-meta-expression-psm</module>
         <module>judo-meta-jql</module>
         <module>judo-meta-rdbms</module>
         <module>judo-meta-query</module>
@@ -102,6 +105,8 @@
         <module>judo-tatami-jsl</module>
         <module>judo-runtime-core</module>
         <module>judo-runtime-core-jsl</module>
+        <module>judo-jsl-springboot-parent</module>
+        <module>judo-jsl-springboot-archetype</module>
         <module>judo-jsl-vscode</module>
     </modules>
 
