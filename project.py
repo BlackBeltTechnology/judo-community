@@ -94,11 +94,19 @@ To ignore specific modules, use -bi switch.
 
 If the build is failing somewhere, after fixing the issue you can continue
 
-    ./project.py -bs -bc <module_to_continue_from>
+    ./project.py -bs -c <module_to_continue_from>
 
-To start a build fromn judo-meta-jsl, type
 
-    ./project.py -bs -bm judo-meta-jsl
+To start a build from judo-meta-jsl, type
+
+    ./project.py -bs -sm judo-meta-jsl
+
+It can contain several start module.
+
+If you do not want to build the whole dependency chain, you can define terminate modules.
+In this case the modules between start and terminate modules will be built.
+
+    ./project.py -bs -sm judo-meta-jsl -tm judo-runtime-core-jsl
 
 
 = Releasing using the script
@@ -134,10 +142,16 @@ When working an HTTP server run, you can see the process:
     http://localhost:8000
 
 """
+import atexit
+import base64
+import http
 import json
 import os
 import re
+import socket
+import webbrowser
 from argparse import RawDescriptionHelpFormatter, ArgumentParser
+from typing import Dict, Any
 
 from github import Github
 import yaml
@@ -153,17 +167,23 @@ from networkx.drawing.nx_pydot import write_dot, to_pydot
 from networkx.algorithms.dag import transitive_reduction
 from networkx.algorithms.dag import ancestors, descendants
 
+from asciidag.graph import Graph as AsciiGraph
+from asciidag.node import Node as AsciiNode
+
 import argparse
 import textwrap
 
+from http.server import BaseHTTPRequestHandler
 import threading
-import http.server
-import atexit
+
 from datetime import datetime
 
 from colorama import init, Fore, Style
 
 from atlassian import Jira
+
+# TODO: Adapt https://hal.archives-ouvertes.fr/hal-00695818/document
+# TODO: Adapt https://www.cse.wustl.edu/~lu/papers/tpds-dags.pdf
 
 init(autoreset=True)
 
@@ -179,35 +199,28 @@ general_arg_group.add_argument("-d", "--dirty", action="store_true", dest="dirty
                                help='Do not update yaml')
 general_arg_group.add_argument("-cu", "--continous", action="store_true", dest="continous_update", default=False,
                                help='Continuously update / fetch / wait until last level')
-general_arg_group.add_argument("-minr", "--minrank", action="store", dest="min_rank", default=1, type=int,
-                               help='Minimum rank is run')
-general_arg_group.add_argument("-maxr", "--maxrank", action="store", dest="max_rank", default=100, type=int,
-                               help='Maximum rank is run')
-general_arg_group.add_argument("-p", "--project", action="store", dest="project", default=None,
-                               help='Run only on the defined project')
+general_arg_group.add_argument("-sm", "--start-modules", action="store", dest="start_modules", default=None,
+                               metavar='MODULE...', nargs="*",
+                               help='Run only on the defined module(s)')
+general_arg_group.add_argument("-tm", "--terminate-modules", dest="terminate_modules",
+                               metavar='MODULE...', nargs="*",
+                               help="The process is terminated with these given modules. Only the models between "
+                                    "modules and terminate modules will processed. ")
+general_arg_group.add_argument("-im", "--ignored-modules", dest="ignored_modules", metavar='MODULE...',
+                               nargs="*",
+                               help="Ignore given module(s)")
+general_arg_group.add_argument("-c", "-continue-module", dest="continue_module",
+                               metavar='MODULE', nargs=1,
+                               help="Continue processing from the given module")
 general_arg_group.add_argument("-relnotes", "--release-notes", dest="relnotes", nargs=1,
-                               metavar=("FROM_HASH[..TO_HASH]"),
+                               metavar="FROM_HASH[..TO_HASH]",
                                help="Generate release notes based on different project-meta.yml versions")
-
-# parser.add_argument("-ss", "--snapshots", nargs='*', dest="switch_to_snapshots",
-#                    help="Switch to snapshot dependencies starting from the given module(s). If not given all modules is building.")
-# parser.add_argument("-bl", "--build-local", dest="build_local", metavar='CONTINUE_FROM', nargs='?', const='False',
-#                    help="Build updated modules locally")
-# parser.add_argument("-bp2", "--build-local-p2", action="store_true", dest="build_local_p2", default=False,
-#                    help='Build p2 repository for local build')
 
 localbuild_arg_group = parser.add_argument_group('Local build control arguments')
 localbuild_arg_group.add_argument("-bs", "--build-snapshot", dest="build_snapshot", action='store_true', default=False,
                                   help="Build modules")
-localbuild_arg_group.add_argument("-bi", "--build-ignore", dest="build_modules_ignored", metavar='MODULE...',
-                                  nargs="*",
-                                  help="Ignore given module(s)")
-localbuild_arg_group.add_argument("-bm", "--build-modules", dest="build_modules",
-                                  metavar='MODULE...', nargs="*",
-                                  help="Build the given module(s) and ascendants")
-localbuild_arg_group.add_argument("-bc", "--build-continue-from", dest="continue_module",
-                                  metavar='MODULE', nargs=1,
-                                  help="Retry build from the given module")
+localbuild_arg_group.add_argument("-kc", "--keep-changes", dest="keep_changes", action='store_true', default=False,
+                                  help="Keep changes in files")
 
 git_arg_group = parser.add_argument_group('GIT control arguments')
 git_arg_group.add_argument("-gc", "--gitcheckout", action="store_true", dest="git_checkout", default=False,
@@ -226,13 +239,6 @@ github_arg_group.add_argument("-fv", "--fetchversions", action="store_true", des
                               default=False,
                               help='Fetch last released versions from github')
 
-# parser.add_argument("-wu", "--wait", action="append", dest="wait_formodules", default=[],
-# 	help='Repeated wait for the updated modules version update')
-# parser.add_argument("-wi", "--waitinterval", action="store", dest="wait_interval", type=int, default=60,
-# 	help='How many sec is waited between the version fetches')
-# parser.add_argument("-wt", "--waittimeout", action="store", dest="wait_timeout", type=int, default=3600,
-# 	help='When the whole repeated wait is time outed')
-
 pom_arg_group = parser.add_argument_group('Maven POM control arguments')
 pom_arg_group.add_argument("-up", "--updatepom", action="store_true", dest="update_pom", default=False,
                            help='Update pom.xml')
@@ -248,14 +254,13 @@ access_arg_group.add_argument("-gh", "--githubtoken", action="store", dest="gith
                               help='GitHub token used for authentication')
 access_arg_group.add_argument("-jtok", "--jiratoken", action="store", dest="jira_token",
                               default=os.environ.get('JUDO_JIRA_TOKEN', ''),
-                              help='Jira token used for authentication (https://id.atlassian.com/manage-profile/security/api-tokens)')
+                              help='Jira token used for authentication '
+                                   '(https://id.atlassian.com/manage-profile/security/api-tokens)')
 access_arg_group.add_argument("-jusr", "--jirauser", action="store", dest="jira_user",
                               default=os.environ.get('JUDO_JIRA_USER', ''),
                               help='Jira user used for authentication - same user as token user')
 
 args = parser.parse_args()
-
-current_rank = args.min_rank
 
 modules = []
 module_by_name = {}
@@ -363,14 +368,14 @@ class Module(object):
         self.dependencies = dependencies
 
     def update_github_versions(self):
-        if not self.is_process():
+        if not self.is_processable():
             return
         github = Github(login_or_token=args.github_token)
         # repository = github.get_organization(par['github'].split("/")[0]).get_repo(par['github'].split("/")[1])
         repository = github.get_repo(self.github)
         if self.branch == 'master':
             for tag in repository.get_tags():
-                if (tag.name and re.match(r'^v(\d+\.)?(\d+\.)?(\*|\d+)$', tag.name)):
+                if tag.name and re.match(r'^v(\d+\.)?(\d+\.)?(\*|\d+)$', tag.name):
                     ver = tag.name.strip()[1:]  # .encode('ascii', 'ignore')
                     if self.version != ver:
                         print(
@@ -383,7 +388,7 @@ class Module(object):
         else:
             for tag in repository.get_tags():
                 print(" -> " + tag.name)
-                if (tag.name and re.match(r'^v.*' + self.branch + '.*', tag.name)):
+                if tag.name and re.match(r'^v.*' + self.branch + '.*', tag.name):
                     ver = tag.name.strip()[1:]  # .encode('ascii', 'ignore')                  
                     if self.version != ver:
                         print(
@@ -397,10 +402,10 @@ class Module(object):
 
     def update_dependency_versions_in_pom(self, write_pom=False):
         if self.path is None:
-            return
+            return False
 
-        if not self.is_process():
-            return
+        if not self.is_processable():
+            return False
 
         print(f"{Fore.YELLOW}Checking POM: {Fore.GREEN}{self.path}/pom.xml")
         pom = parse(open(self.path + "/pom.xml", encoding="UTF-8"),
@@ -468,9 +473,9 @@ class Module(object):
         call("git commit -m \"" + _commit_message + "\"", shell=True, cwd=_currentDir)
         call("git push", shell=True, cwd=_currentDir)
 
-    def is_process(self):
-        return not self.ignored and (
-                not args.project or args.project == self.name) and args.min_rank <= self.rank <= args.max_rank
+    def is_processable(self):
+        return not self.ignored and self.virtual
+        # (not args.module or args.module == self.name) and args.min_rank <= self.rank <= args.max_rank
 
 
 def process_module(par, _modules, _module_by_name):
@@ -499,8 +504,9 @@ def calculate_graph(_modules):
         _g.add_node(_module)
 
     for _module in _modules:
-        for dependency in _module.dependencies:
-            _g.add_edge(_module, dependency)
+        for _dependency in _module.dependencies:
+            if _dependency in _modules:
+                _g.add_edge(_module, _dependency)
     return _g
 
 
@@ -511,17 +517,33 @@ def calculate_reduced_graph(_modules):
 
 def calculate_ranks(_modules):
     _g = calculate_reduced_graph(_modules).reverse(copy=True)
-    for node in _g.nodes:
-        node.rank = 1
+    _groups = list(topological_sort_grouped(_g))
+    rank = 0
+    for _group in _groups:
+        rank += 1
+        for _module in _group:
+            _module.rank = rank
 
-    for node in _g.nodes:
-        for (head, tail) in nx.bfs_edges(_g, node):
-            tail.rank = max(tail.rank, head.rank + 1)
 
-    # Another round because on same condition parent / child can have same rank.
-    for node in _g.nodes:
-        for (head, tail) in nx.bfs_edges(_g, node):
-            tail.rank = max(tail.rank, head.rank + 1)
+# Algorithm from: https://stackoverflow.com/questions/56802797/digraph-parallel-ordering
+# Edges: (1, 2) (2, 4) (3, 4), (4, 5), (4, 6), (6, 7)
+# In [21]: list(nx.topological_sort(G))
+# Out[21]: [3, 1, 2, 4, 6, 7, 5]
+#
+# In [22]: list(topological_sort_grouped(G))
+# Out[22]: [[1, 3], [2], [4], [5, 6], [7]]
+def topological_sort_grouped(_g):
+    indegree_map = {v: d for v, d in _g.in_degree() if d > 0}
+    zero_indegree = [v for v, d in _g.in_degree() if d == 0]
+    while zero_indegree:
+        yield zero_indegree
+        new_zero_indegree = []
+        for v in zero_indegree:
+            for _, child in _g.edges(v):
+                indegree_map[child] -= 1
+                if not indegree_map[child]:
+                    new_zero_indegree.append(child)
+        zero_indegree = new_zero_indegree
 
 
 def scrub_dict(d):
@@ -531,7 +553,7 @@ def scrub_dict(d):
             v = scrub_dict(v)
         if isinstance(v, list):
             v = scrub_list(v)
-        if not v in (u'', None, {}, []):
+        if v not in (u'', None, {}, []):
             new_dict[k] = v
     return new_dict
 
@@ -564,10 +586,6 @@ def save_modules(_modules, _module_by_name):
 
 
 def print_dependency_graph(_modules):
-    # https://ocefpaf.github.io/python4oceanographers/blog/2014/11/17/networkX/
-    # write_dot(calculate_reduced_graph(), "dependency.dot")
-    # (graph,) = pydot.graph_from_dot_data(open('dependency.dot').read())
-    # graph.write_svg("dependency.svg")
     _g = calculate_reduced_graph(_modules)
     for node in _g.nodes():
         _g.nodes[node]['shape'] = 'box'
@@ -576,108 +594,110 @@ def print_dependency_graph(_modules):
     to_pydot(_g).write_svg("dependency.svg")
 
 
-class MyHandler(http.server.BaseHTTPRequestHandler):
-    modules = None
-    process_info = None
+def print_dependency_graph_ascii(_modules):
+    _available_modules = set(filter(lambda _m: not _m.ignored and not _m.virtual, _modules))
 
-    def __init__(self, _modules, _process_info):
-        self.modules = _modules
-        self.process_info = _process_info
+    _g = calculate_reduced_graph(_available_modules)
+    _groups = list(topological_sort_grouped(_g))
 
-    def do_HEAD(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.end_headers()
+    _graph_root = []
+    _graph_nodes = {}
 
-    def do_GET(self):
+    _prev_group = []
+    for _group in list(reversed(_groups)):
+        for _module in _group:
+            _ancestors = set(ancestors(_g, _module))
+            _descendants = set(descendants(_g, _module)).intersection(_prev_group)
+            _parent_nodes = list(map(lambda _d: _graph_nodes[_d.name], _descendants))
+            _current_node = AsciiNode(str(_module), _parent_nodes)
+            _graph_nodes[_module.name] = _current_node
+            if len(_ancestors) == 0:
+                _graph_root.append(_current_node)
 
-        _g = nx.DiGraph()
-        for _module in self.process_info.keys():
-            _g.add_node(_module)
+        _prev_group = _group
 
-        for _module in self.modules:
-            for dependency in _module.dependencies:
-                if dependency in self.process_info.keys():
-                    _g.add_edge(_module, dependency)
-
-        _g = transitive_reduction(_g)
-        for node in _g.nodes():
-            _g.node[node]['shape'] = 'box'
-            _g.node[node]['label'] = f"{node.name} ({node.rank})"
-            _g.node[node]['fillcolor'] = 'azure3'
-            _g.node[node]['style'] = 'filled'
-            if self.process_info.get(node, {"status": "UNKNOWN"}).get("status") == "UNKNOWN":
-                _g.node[node]['fillcolor'] = 'wheat'
-            if self.process_info.get(node, {"status": ""}).get("status") == "RUNNING":
-                _g.node[node]['fillcolor'] = "yellow"
-            if self.process_info.get(node, {"status": ""}).get("status") == "OK":
-                _g.node[node]['fillcolor'] = "green"
-
-        svg = to_pydot(_g).create_svg().decode("utf-8")
-        # body = "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title/></head><body><svg>" + svg +
-        # "</svg></body</html>"
-        self.send_response(200)
-        # self.send_header("Content-type", "text/html; charset=utf-8")
-        self.send_header("Content-type", "image/svg+xml; charset=utf-8")
-
-        self.send_header("Content-Length", str(len(svg)))
-        self.end_headers()
-        self.wfile.write(bytes(svg, "utf-8"))
+    _graph = AsciiGraph()
+    _graph.show_nodes(_graph_root)
 
 
-# return StringIO(body)
+def get_request_handler(_modules, _process_info):
+    class MyHandler(http.server.BaseHTTPRequestHandler):
+
+        def do_HEAD(self):
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+
+        def do_GET(self):
+
+            _g = nx.DiGraph()
+            for _module in _process_info.keys():
+                _g.add_node(_module)
+
+            for _module in _modules:
+                for dependency in _module.dependencies:
+                    if dependency in _modules:
+                        _g.add_edge(_module, dependency)
+
+            _g = transitive_reduction(_g)
+            for node in _g.nodes():
+                _g.nodes[node]['shape'] = 'box'
+                _g.nodes[node]['label'] = f"{node.name} ({node.rank})"
+                _g.nodes[node]['fillcolor'] = 'azure3'
+                _g.nodes[node]['style'] = 'filled'
+                if _process_info.get(node, {"status": "UNKNOWN"}).get("status") == "UNKNOWN":
+                    _g.nodes[node]['fillcolor'] = 'wheat'
+                if _process_info.get(node, {"status": ""}).get("status") == "RUNNING":
+                    _g.nodes[node]['fillcolor'] = "yellow"
+                if _process_info.get(node, {"status": ""}).get("status") == "OK":
+                    _g.nodes[node]['fillcolor'] = "green"
+
+            svg = to_pydot(_g).create_svg().decode("utf-8")
+
+            message_bytes = svg.encode('ascii')
+            base64_bytes = base64.b64encode(message_bytes)
+            body = "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title/></head><body onload=\"load()\">" \
+                   "<script type=\"text/javascript\">" \
+                   "function load() { setTimeout(\"window.open(self.location, '_self');\", 5000); }" \
+                   "</script>" \
+                   "<embed src=\"data:image/svg+xml;base64," + base64_bytes.decode('ascii') + "\"/>" + "</body></html>"
+
+            self.send_response(200)
+            self.send_header("Content-type", "image/svg+xml; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(bytes(body, "utf-8"))
+
+    return MyHandler
 
 
 def start_process_info_server(_modules, _process_info):
-    handler = MyHandler(_modules, _process_info)
-    protocol = "HTTP/1.1"
-    port = 8000
-    server_address = ('localhost', port)
-    handler.protocol_version = protocol
-    httpd: StoppableHTTPServer = StoppableHTTPServer(server_address, handler)
-    print(f"{Fore.YELLOW}Serving at port:{Fore.GREEN}{port}")
+    _port = 8000
+    while is_port_in_use(_port):
+        _port += 1
+
+    print(f"{Fore.YELLOW}Serving at port:{Fore.GREEN}{_port}")
+    server_address = ('localhost', _port)
+    httpd: StoppableHTTPServer = StoppableHTTPServer(server_address, get_request_handler(_modules, _process_info))
+    threading.Thread(target=lambda: webbrowser.open_new_tab(f"http://127.0.0.1:{_port}")).start()
     return httpd
 
 
-def wait_for_modules_to_release(_process_info, _wait_for=None):
-    if _wait_for is None:
-        _wait_for = []
-    while len(_wait_for) > 0:
-        time.sleep(15)
-        for _module in _wait_for:
-            _process_info[_module] = {"stat us": "RUNNING"}
-            print(
-                f"{Fore.YELLOW}Checking latest release for {Fore.GREEN}{_module.name}{Fore.YELLOW} in branch: "
-                f"{Fore.GREEN}{_module.branch}")
-            if _module.update_github_versions():
-                print("  NEW Version, it removed from wait list")
-                _process_info[_module] = {"status": "OK"}
-                _wait_for.remove(_module)
-
-
-def update_current_rank(_modules, _module_by_name):
-    _updated_dependency_in_modules = []
+def check_modules_for_update(_modules, _module_by_name):
+    # Check implications on modules
+    _updated_modules = []
     for _module in _modules:
-        if _module.is_process():
+        if _module.is_processable():
             # print("Checking dependency update in POM: " + module.name)
             if _module.update_dependency_versions_in_pom(False):
-                _updated_dependency_in_modules.append(_module)
+                _updated_modules.append(_module)
 
-    minimum_updated_rank = 1000000
+    _current_updated_dependency_in_modules = _updated_modules
 
-    for _module in _updated_dependency_in_modules:
-        if minimum_updated_rank > _module.rank >= args.min_rank and _module.rank <= args.max_rank:
-            minimum_updated_rank = _module.rank
-
-    _current_updated_dependency_in_modules = []
-    for _module in _updated_dependency_in_modules:
-        # print(module.name + " module update in this batch? " + ("YES" if minimum_updated_rank == module.rank else
-        # "NO"))
-        if minimum_updated_rank == _module.rank:
-            _current_updated_dependency_in_modules.append(_module)
-
-    _current_rank = minimum_updated_rank
-    print("Current rank: " + str(_current_rank))
+    # Removing modules which have dependency on current modules
+    for _module in _updated_modules:
+        _current_updated_dependency_in_modules = _current_updated_dependency_in_modules.difference(
+            set(ancestors(calculate_reduced_graph(_modules), _module)))
 
     for _module in _current_updated_dependency_in_modules:
         if args.update_pom:
@@ -699,13 +719,13 @@ def update_current_rank(_modules, _module_by_name):
 
 # =============================== Initial version fetching
 
-def fetch_github_versions():
-    for _module in modules:
-        if _module.is_process():
-            print(
-                f"{Fore.YELLOW}Checking latest release for {Fore.GREEN}{_module.name}{Fore.YELLOW} in branch: "
-                f"{Fore.GREEN}{_module.branch}")
-            _module.update_github_versions()
+def fetch_github_versions(_modules):
+    for _module in _modules:
+        #        if _module.is_processable():
+        print(
+            f"{Fore.YELLOW}Checking latest release for {Fore.GREEN}{_module.name}{Fore.YELLOW} in branch: "
+            f"{Fore.GREEN}{_module.branch}")
+        _module.update_github_versions()
 
 
 def current_snapshot_version(_module):
@@ -722,6 +742,7 @@ def current_snapshot_version(_module):
 
     return _version
 
+
 def current_pom_version(_module, _dep_module):
     pom = parse(open(_module.path + "/pom.xml"), parser=XMLParser(target=CommentedTreeBuilder()))
     root = pom.getroot()
@@ -731,138 +752,287 @@ def current_pom_version(_module, _dep_module):
         if e.tag == pom_namespace + _dep_module.property:
             _version = e.text
             break
-
     return _version
 
 
 def build_module(_module, arguments=None):
     if arguments is None:
         arguments = []
-    print(f"\n{Fore.YELLOW}================================================================================{Style.RESET_ALL}")
-    print(f"\n{Fore.YELLOW}Building module{Style.RESET_ALL} {Fore.RED}{_module.path}{Style.RESET_ALL}")
-    # proc = subprocess.Popen(["mvn", "clean", "install"] + args +
-    # ["-f", f"{module.path}/pom.xml"], stdout=subprocess.PIPE)
-    # for line in proc.stdout:
-    # 	print(line.decode('UTF-8'), end="")
-    # proc.wait()
-    # if proc.returncode != 0:
-    # 	return False
-    # return True
+    print(
+        f"\n{Fore.GREEN}================================================================================"
+        f"{Style.RESET_ALL}")
+    print(f"\n{Fore.YELLOW}Building module{Style.RESET_ALL} {Fore.WHITE}{_module.path}{Style.RESET_ALL}")
     _currentDir = os.getcwd() + '/' + _module.path
     if not _module.call_beforelocalbuildscripts():
         return False
-    cmd = "mvn clean install " + (" ".join(list(map(lambda x: f"-D{x}", arguments))))
-    print(f"Calling maven: \n{Fore.MAGENTA}{cmd}{Style.RESET_ALL}\n")
-    print(f"\n{Fore.YELLOW}================================================================================{Style.RESET_ALL}")
-    if call(cmd, shell=True, cwd=_currentDir) != 0:
-        return False
-    if not _module.call_afterlocalbuildscripts():
+
+    _original_versions = {}
+
+    _pom = parse(open(_module.path + "/pom.xml"), parser=XMLParser(target=CommentedTreeBuilder()))
+    _root = _pom.getroot()
+    _properties = _root.find(pom_namespace + 'properties')
+
+    # Update versions properties to snapshot in pom.xml
+    for arg in arguments:
+        _versionName = arg.split("=")[0]
+        if "-version" in _versionName:
+            _version = arg.split("=")[1]
+            _ref_prop_element = _properties.find(pom_namespace + _versionName)
+            if _ref_prop_element is not None:
+                _original_versions[_versionName] = _ref_prop_element.text
+                _ref_prop_element.text = _version
+
+    if len(_original_versions) > 0:
+        _pom.write(_module.path + "/pom.xml", encoding="UTF-8")
+
+    cmd = "mvn clean install  " + (" ".join(list(map(lambda x: f"-D{x}", arguments))))
+    print(f"{Fore.YELLOW}Calling maven: \n\t{Fore.CYAN}{cmd}{Style.RESET_ALL}\n")
+    print(
+        f"{Fore.GREEN}================================================================================"
+        f"{Style.RESET_ALL}")
+    _ret = call(cmd, shell=True, cwd=_currentDir)
+
+    if not args.keep_changes:
+        # Restore versions properties to original values in pom.xml
+        if len(_original_versions) > 0:
+            for _versionName in _original_versions.keys():
+                _ref_prop_element = _properties.find(pom_namespace + _versionName)
+                _ref_prop_element.text = _original_versions[_versionName]
+            _pom.write(_module.path + "/pom.xml", encoding="UTF-8")
+
+    if _ret != 0:
         return False
     return True
 
 
-def build_snapshot(_modules, _process_info, _module_by_name):
-    _available_modules = set(filter(lambda _m: not _m.virtual and not _m.ignored, _modules))
-    _ignored_modules = set()
-    if not args.build_modules_ignored is None:
-        for _module_name in args.build_modules_ignored:
+def get_module(_module_names, _module_by_name):
+    _modules = set()
+    if _module_names is not None:
+        for _module_name in _module_names:
             _module = _module_by_name[_module_name]
             if _module is None:
                 raise SystemExit(f"\n{Fore.RED}No module name is found {_module_name}.")
             if _module.virtual:
                 raise SystemExit(f"\n{Fore.RED}Virtual module cannot be used in snapshot mode: {_module_name}.")
-            _ignored_modules.add(_module)
+            _modules.add(_module)
+    return _modules
 
-    _retry_command = "./project.py -bs "
 
+def terminate_modules(_module_by_name):
+    return get_module(args.terminate_modules, _module_by_name)
+
+
+def ignored_modules(_module_by_name):
+    return get_module(args.ignored_modules, _module_by_name)
+
+
+def start_modules(_module_by_name):
+    return get_module(args.start_modules, _module_by_name)
+
+
+def calc_retry_command_for_build(_modules, _process_info, _module_by_name):
+    _retry_command = ""
+
+    _start_modules = start_modules(_module_by_name)
+    if len(_start_modules) > 0:
+        _retry_command = _retry_command + "-sm "
+        for _module in _start_modules:
+            _retry_command = _retry_command + _module.name + " "
+
+    _ignored_modules = ignored_modules(_module_by_name)
     if len(_ignored_modules) > 0:
-        print(f"{Fore.YELLOW}Modules ignored:{Style.RESET_ALL} " + (
-            ", ".join(map(lambda _m: _m.name, list(_ignored_modules)))) + "\n")
-        _retry_command = _retry_command + "-bi "
+        _retry_command = _retry_command + "-im "
         for _module in _ignored_modules:
             _retry_command = _retry_command + _module.name + " "
 
-    _root_modules = set()
-    if not args.build_modules is None:
-        for _module_name in args.build_modules:
-            _module = _module_by_name[_module_name]
-            if _module is None:
-                raise SystemExit(f"\n{Fore.RED}No module name is found {_module_name}.")
-            if _module.virtual:
-                raise SystemExit(f"\n{Fore.RED}Virtual module cannot be used in snapshot mode: {_module_name}.")
-            _root_modules.add(_module)
-
-    _modules_to_build = set(_available_modules)
-
-    if len(_root_modules) > 0:
-        _retry_command = _retry_command + "-bm "
-        _modules_to_build = set(_root_modules)
-        print(f"{Fore.YELLOW}Root modules:{Style.RESET_ALL} " + (
-            ", ".join(map(lambda _m: _m.name, list(_root_modules)))))
-        for _module in _root_modules:
-            print(f"{Fore.BLUE}{_module.name} {Style.RESET_ALL} ancestors added: " + (
-                ", ".join(
-                    map(lambda _m: _m.name, ancestors(calculate_reduced_graph(_available_modules), _module)))))
-            _modules_to_build = _modules_to_build.union(set(ancestors(calculate_reduced_graph(_available_modules), _module)))
+    _terminate_modules = terminate_modules(_module_by_name)
+    if len(_terminate_modules) > 0:
+        _retry_command = _retry_command + "-tm "
+        for _module in _terminate_modules:
             _retry_command = _retry_command + _module.name + " "
 
-    _modules_to_build = sorted(_modules_to_build.difference(_ignored_modules), key=lambda _m: (_m.rank, _m.name))
-    print(f"\n{Fore.YELLOW}Modules to build:{Style.RESET_ALL} " + (
-        ", ".join(map(lambda _m: _m.name, _modules_to_build))) + "\n")
+    return _retry_command
 
+
+def calculate_processable_modules(_modules, _process_info, _module_by_name):
+    _available_modules = set(filter(lambda _m: not _m.ignored and not _m.virtual, _modules))
+    _ignored_modules = ignored_modules(_module_by_name).union(
+        set(filter(lambda _m: _m.virtual or _m.ignored, _modules)))
+    _start_modules = start_modules(_module_by_name)
+    _modules_to_build = set(_available_modules)
+    _terminate_modules = terminate_modules(_module_by_name)
+
+    # if len(_start_modules) > 0:
+    #     print(f"{Fore.YELLOW}Start modules:{Style.RESET_ALL} " + (
+    #         ", ".join(map(lambda _m: _m.name, list(_start_modules)))))
+
+    if len(_start_modules) == 0:
+        _g = calculate_reduced_graph(_available_modules).reverse(copy=True)
+        _groups = list(topological_sort_grouped(_g))
+        if len(_groups) > 0:
+            _start_modules = _groups[0]
+
+    if len(_terminate_modules) > 0:
+        for _module_terminate in _terminate_modules:
+            # removing terminate modules ancestors
+            _terminate_ancestors = set(ancestors(calculate_reduced_graph(_available_modules), _module_terminate))
+            _terminate_descendants = set(
+                descendants(calculate_reduced_graph(_available_modules), _module_terminate))
+
+            # print(f"{Fore.GREEN}{_module_terminate.name} {Style.RESET_ALL} terminate ancestors: " + (
+            #     ", ".join(
+            #         map(lambda _m: _m.name, _terminate_ancestors))))
+            #
+            # print(f"{Fore.GREEN}{_module_terminate.name} {Style.RESET_ALL} terminate descendants: " + (
+            #     ", ".join(
+            #         map(lambda _m: _m.name, _terminate_descendants))))
+
+    if len(_start_modules) > 0:
+        _modules_to_build = set(_start_modules)
+        for _module in _start_modules:
+            _calculated_modules = set(ancestors(calculate_reduced_graph(_available_modules), _module))
+            # print(f"{Fore.BLUE}{_module.name} {Style.RESET_ALL} ancestors (all): " + (
+            #     ", ".join(
+            #         map(lambda _m: _m.name, _calculated_modules))))
+
+            for _module_terminate in _terminate_modules:
+                # removing terminate modules ancestors
+                _terminate_ancestors = set(ancestors(calculate_reduced_graph(_available_modules), _module_terminate))
+                _terminate_descendants = set(
+                    descendants(calculate_reduced_graph(_available_modules), _module_terminate))
+                _calculated_modules = _calculated_modules.difference(_terminate_ancestors)
+
+                # the required modules is the intersection of terminate modules's descendanes and module's ascendents
+                _calculated_modules = _calculated_modules.intersection(_terminate_descendants)
+
+            _calculated_modules = _calculated_modules.union(_terminate_modules)
+
+            # print(f"{Fore.BLUE}{_module.name} {Style.RESET_ALL} ancestors (reduced with terminated): " + (
+            #     ", ".join(
+            #         map(lambda _m: _m.name, _calculated_modules))))
+            _modules_to_build = _modules_to_build.union(_calculated_modules)
+
+    _modules_to_build = sorted(_modules_to_build.difference(_ignored_modules), key=lambda _m: (_m.rank, _m.name))
+    _all_modules = sorted(_modules, key=lambda _m: (_m.rank, _m.name))
+
+    print(f"\n{Fore.YELLOW}Modules to process {Fore.GREEN}✓ - process {Fore.RED}✘ - ignored{Style.RESET_ALL}:\n" + (
+        f"\n".join(map(lambda _m: (f"{Fore.RED}✘  {Style.RESET_ALL}" if _m in _ignored_modules
+                                   else (f"{Fore.GREEN}✓  {Style.RESET_ALL}" if _m in _modules_to_build
+                                         else "   ")) + f"{Fore.WHITE}{_m.name} ({_m.rank}){Style.RESET_ALL}",
+                       _all_modules))) + f"{Style.RESET_ALL}\n")
+
+    return _modules_to_build
+
+
+def build_snapshot(_modules, _process_info, _module_by_name):
+    _ignored_modules = ignored_modules(_module_by_name)
+
+    #    if len(ignored_modules()) > 0:
+    #        print(f"{Fore.YELLOW}Modules ignored:{Style.RESET_ALL} " + (
+    #            ", ".join(map(lambda _m: _m.name, list(_ignored_modules)))) + "\n")
+    #    ✓
+
+    _retry_command = './project.py -bs ' + calc_retry_command_for_build(_modules, _process_info, _module_by_name)
     _version_args = []
-    for _module in _modules_to_build:
+    for _module in _modules:
         _version_args.append(_module.property + "=" + current_snapshot_version(_module))
 
-    print(f"{Fore.YELLOW}Versions override: {Fore.GREEN}" + f"{Fore.YELLOW}, {Fore.GREEN}".join(_version_args) + "\n")
+    print(f"{Fore.YELLOW}Versions override:{Style.RESET_ALL}\n\t" + f"\n\t".join(
+        map(lambda _v: f"{Fore.WHITE}{_v.split('=')[0]} {Fore.YELLOW}={Fore.GREEN} {_v.split('=')[1]}{Style.RESET_ALL}",
+            _version_args)))
 
     if args.continue_module:
         _start_module_name = args.continue_module[0]
-        _build_from_index = list(map(lambda _m: _m.name, _modules_to_build)).index(_start_module_name)
-        _modules_to_build = list(_modules_to_build[_build_from_index:])
+        _build_from_index = list(map(lambda _m: _m.name, _modules)).index(_start_module_name)
+        _modules = list(_modules[_build_from_index:])
 
-    for _module in _modules_to_build:
+    for _module in _modules:
         _process_info[_module] = {"status": "RUNNING"}
 
         if _module.p2 and 'target' in _module.p2.keys():
-            if not 'releaselocations' in _module.p2.keys():
+            if 'releaselocations' not in _module.p2.keys():
                 raise SystemExit(f"\n{Fore.RED}Error when building {_module.name}. `releaselocations` not defined. "
-                                 f"To retry, run {_retry_command} -bc {_module.name}")
+                                 f"\nTo retry, run {Fore.YELLOW}{_retry_command} -c {_module.name}{Style.RESET_ALL}")
 
             with open(os.path.abspath(os.getcwd() + "/" + _module.path + "/" + _module.p2['releaselocations'])) as f:
                 _releaseLocs = {k: v for _line in filter(str.rstrip, f) for (k, v) in [_line.strip().split(None, 1)]}
 
-            _locations = dict(_releaseLocs)
+            _locations: dict[Any, str] = dict(_releaseLocs)
             for _dependency_module in _module.dependencies:
                 _locations_key = _dependency_module.name + "-location"
                 _version = current_pom_version(_module, _dependency_module)
 
                 if not _version:
-                    raise SystemExit(f"\n{Fore.RED}Error when building {_module.name}. Dependency {_dependency_module.name} version not found. "
-                                     f"To retry, run {_retry_command} -bc {_module.name}")
+                    raise SystemExit(
+                        f"\n{Fore.RED}Error when building {_module.name}. "
+                        f"Dependency {_dependency_module.name} version not found. "
+                        f"\nTo retry, run {Fore.YELLOW}{_retry_command} -c {_module.name}{Style.RESET_ALL}")
                 _value = None
 
-                if _dependency_module in _available_modules and _dependency_module.p2:
-                    _value = "file:" + os.path.abspath(os.getcwd() + "/" + _dependency_module.path + "/" + _dependency_module.p2['localsite'])
+                if _dependency_module in _modules and _dependency_module.p2:
+                    _value = "file:" + os.path.abspath(
+                        os.getcwd() + "/" + _dependency_module.path + "/" + _dependency_module.p2['localsite'])
                 elif _locations_key in _releaseLocs.keys():
                     _value = _releaseLocs[_locations_key]
 
                 if _value:
                     _locations[_locations_key] = _value.replace("${" + _dependency_module.property + "}", _version)
 
-            print("P2 Locations: \n" + json.dumps(_locations, indent=4))
+            print(f"\n{Fore.YELLOW}P2 Locations: {Style.RESET_ALL}\n {json.dumps(_locations, indent=4)}")
 
             with open(os.path.abspath(os.getcwd() + "/" + _module.path + "/" + _module.p2['template'])) as _tf:
                 _template = "".join(_tf.readlines()).replace("${build.timestamp.millis}", str(int(time.time() * 1000)))
                 for _loc in _locations.keys():
                     _template = _template.replace("${" + _loc + "}", _locations[_loc])
-                with open(os.path.abspath(os.getcwd() + "/" + _module.path + "/" + _module.p2['target']), 'w', encoding='utf-8') as _out:
+                with open(os.path.abspath(os.getcwd() + "/" + _module.path + "/" + _module.p2['target']), 'w',
+                          encoding='utf-8') as _out:
                     _out.write(_template)
 
-        if not build_module(_module, _version_args):
-           raise SystemExit(f"\n{Fore.RED}Error when building {_module.name}. "
-                            f"To retry, run {_retry_command} -bc {_module.name}")
+        _status = build_module(_module, _version_args)
+        _status2 = True
+
+        if not args.keep_changes:
+            # Usually restore .target file
+            _module.call_afterlocalbuildscripts()
+
+        if not _status:
+            raise SystemExit(f"\n{Fore.RED}Error when building {_module.name}. "
+                             f"\nTo retry, run {Fore.YELLOW}{_retry_command} -c {_module.name}{Style.RESET_ALL}")
         _process_info[_module] = {"status": "OK"}
+
+
+def build_continuous(_modules, _process_info, _module_by_name):
+    _modules_to_process = check_modules_for_update(_modules, _module_by_name)
+    for _module in _modules:
+        _process_info[module] = {"status": "WAITING"}
+
+    while len(_modules_to_process) > 0:
+        # wait_for_modules_to_release(process_info, current_updated_dependency_in_modules)
+        time.sleep(15)
+        _recalculate_process_modules = False
+        for _module in _modules_to_process:
+            _process_info[_module] = {"status": "RUNNING"}
+            print(
+                f"{Fore.YELLOW}Checking latest release for {Fore.GREEN}{_module.name}{Fore.YELLOW} in branch: "
+                f"{Fore.GREEN}{_module.branch}")
+            if _module.update_github_versions():
+                print("  NEW Version, it removed from wait list")
+                _process_info[_module] = {"status": "OK"}
+                _recalculate_process_modules = True
+
+        if _recalculate_process_modules:
+            _new_modules_to_process = check_modules_for_update(modules, _module_by_name)
+            # TODO: Finish calculation - have to remove modules which have anchestors between
+            # for _processing_module in _new_modules_to_process:
+            #    set(descendants(calculate_reduced_graph(_modules), _processing_module))
+
+        if not args.dirty:
+            save_modules(modules, _module_by_name)
+
+
+def is_port_in_use(_port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(("localhost", _port)) == 0
 
 
 def server_start(_modules, _process_info):
@@ -884,6 +1054,7 @@ def server_shutdown():
 
     if process_info_server_pid is not None:
         process_info_server_pid.join()
+    print(f"{Fore.YELLOW}Stop server\n{Style.RESET_ALL}")
 
 
 # ============================== Check argument
@@ -901,21 +1072,21 @@ for module in modules:
 
 calculate_ranks(modules)
 
-# =============================== Start process info server
-# atexit.register(server_shutdown)
-# server_start(modules, process_info)
+_processable_modules = calculate_processable_modules(modules, process_info, module_by_name)
+
+print_dependency_graph_ascii(modules)
 
 # =============================== Fetch / Checkout / Reset Git
 if args.git_checkout:
-    for module in modules:
+    for module in _processable_modules:
         if not module.virtual and not (args.no_checkout_module and module.name in args.no_checkout_module):
             module.checkout_branch()
 
 if args.fetch_github_versions:
-    fetch_github_versions()
+    fetch_github_versions(modules)
 
 if args.update_module_pom:
-    for module in modules:
+    for module in _processable_modules:
         if module.name == args.update_module_pom[0]:
             module.update_dependency_versions_in_pom(True)
             if not module.call_postchangescripts():
@@ -930,7 +1101,10 @@ if not args.dirty:
 
 # =============================== Switch to snapshot versions from the given module
 if args.build_snapshot:
-    build_snapshot(modules, process_info, module_by_name)
+    # =============================== Start process info server
+    atexit.register(server_shutdown)
+    server_start(_processable_modules, process_info)
+    build_snapshot(_processable_modules, process_info, module_by_name)
 
 # =============================== Generating Graphviz
 if args.graphviz:
@@ -938,8 +1112,8 @@ if args.graphviz:
 
 # =============================== Force postchange run
 if args.run_postchangescripts:
-    for module in modules:
-        if module.is_process():
+    for module in _processable_modules:
+        if module.is_processable():
             if not module.call_postchangescripts():
                 print(f"\n{Fore.RED}Error when calling post change script on {module.name}.")
                 if not args.dirty:
@@ -952,7 +1126,7 @@ if args.run_postchangescripts:
 if args.update_submodules:
     currentDir = os.getcwd()
 
-    for module in modules:
+    for module in _processable_modules:
         if not module.virtual:
             print(f"{Fore.YELLOW}Set branch {Fore.GREEN}{module.branch}{Fore.YELLOW} for {Fore.GREEN}{module.name}")
             # call("git submodule set-branch --branch " + module.branch + " -- " + module.path, shell=True,
@@ -967,24 +1141,13 @@ if args.update_submodules:
 
 # ================================ Checking for updates
 
-current_updated_dependency_in_modules = update_current_rank(modules, module_by_name)
-
 if args.continous_update:
-    for module in current_updated_dependency_in_modules:
-        for ds in descendants(calculate_reduced_graph(modules), module):
-            if module.is_process():
-                process_info[module] = {"status": "WAITING"}
-
-    while len(current_updated_dependency_in_modules) > 0:
-        wait_for_modules_to_release(process_info, current_updated_dependency_in_modules)
-        current_updated_dependency_in_modules = update_current_rank(modules, module_by_name)
-        if not args.dirty:
-            save_modules(modules, module_by_name)
+    build_continuous(_processable_modules, process_info, module_by_name)
 
 if args.relnotes:
     currentDir = os.getcwd()
     hashes = args.relnotes[0].split("..")
-    if (len(hashes) == 2):
+    if len(hashes) == 2:
         current_file_name = "project-meta-" + hashes[1] + ".yml"
         call("git show " + hashes[1] + ":project-meta.yml", shell=True, stdout=open(current_file_name, "w"))
     else:
