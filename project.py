@@ -871,7 +871,7 @@ def calculate_processable_modules(_modules, _process_info, _module_by_name):
     #         ", ".join(map(lambda _m: _m.name, list(_start_modules)))))
 
     if len(_start_modules) == 0:
-        _g = calculate_reduced_graph(_available_modules).reverse(copy=True)
+        _g = calculate_graph(_available_modules).reverse(copy=True)
         _groups = list(topological_sort_grouped(_g))
         if len(_groups) > 0:
             _start_modules = _groups[0]
@@ -879,9 +879,9 @@ def calculate_processable_modules(_modules, _process_info, _module_by_name):
     if len(_terminate_modules) > 0:
         for _module_terminate in _terminate_modules:
             # removing terminate modules ancestors
-            _terminate_ancestors = set(ancestors(calculate_reduced_graph(_available_modules), _module_terminate))
+            _terminate_ancestors = set(ancestors(calculate_graph(_available_modules), _module_terminate))
             _terminate_descendants = set(
-                descendants(calculate_reduced_graph(_available_modules), _module_terminate))
+                descendants(calculate_graph(_available_modules), _module_terminate))
 
             # print(f"{Fore.GREEN}{_module_terminate.name} {Style.RESET_ALL} terminate ancestors: " + (
             #     ", ".join(
@@ -893,28 +893,34 @@ def calculate_processable_modules(_modules, _process_info, _module_by_name):
 
     if len(_start_modules) > 0:
         _modules_to_build = set(_start_modules)
+        _start_modules_ancestors = set()
         for _module in _start_modules:
-            _calculated_modules = set(ancestors(calculate_reduced_graph(_available_modules), _module))
+            _start_modules_ancestors = _start_modules_ancestors.union(set(ancestors(calculate_graph(_available_modules),
+                                                                                    _module)))
             # print(f"{Fore.BLUE}{_module.name} {Style.RESET_ALL} ancestors (all): " + (
             #     ", ".join(
             #         map(lambda _m: _m.name, _calculated_modules))))
 
+            _terminate_ancestors = set()
+            _terminate_descendants = set()
+
             for _module_terminate in _terminate_modules:
                 # removing terminate modules ancestors
-                _terminate_ancestors = set(ancestors(calculate_reduced_graph(_available_modules), _module_terminate))
-                _terminate_descendants = set(
-                    descendants(calculate_reduced_graph(_available_modules), _module_terminate))
-                _calculated_modules = _calculated_modules.difference(_terminate_ancestors)
-
+                _terminate_ancestors = _terminate_ancestors.union(set(ancestors(
+                    calculate_graph(_available_modules), _module_terminate)))
+                _terminate_descendants = _terminate_descendants.union(set(descendants(
+                    calculate_graph(_available_modules), _module_terminate)))
                 # the required modules is the intersection of terminate modules's descendanes and module's ascendents
-                _calculated_modules = _calculated_modules.intersection(_terminate_descendants)
 
-            _calculated_modules = _calculated_modules.union(_terminate_modules)
+        _calculated_modules = _start_modules_ancestors
+        if len(_terminate_descendants) > 0 or len(_terminate_ancestors) > 0:
+            _calculated_modules = _start_modules_ancestors.union(_start_modules)\
+                                    .intersection(_terminate_descendants.union(_terminate_modules))
 
             # print(f"{Fore.BLUE}{_module.name} {Style.RESET_ALL} ancestors (reduced with terminated): " + (
             #     ", ".join(
             #         map(lambda _m: _m.name, _calculated_modules))))
-            _modules_to_build = _modules_to_build.union(_calculated_modules)
+        _modules_to_build = _modules_to_build.union(_calculated_modules)
 
     _modules_to_build = sorted(_modules_to_build.difference(_ignored_modules), key=lambda _m: (_m.rank, _m.name))
     _all_modules = sorted(_modules, key=lambda _m: (_m.rank, _m.name))
