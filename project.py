@@ -55,6 +55,10 @@ To install make sure you are in the judo-ng directory.
 Those features that use the remote repository need a GitHub token for authentication, 
 visit https://github.com/settings/tokens to create one. Scope to select: repo - Full control of private repositories.
 
+If there is any problem with dependencies, try:
+
+      pip install -r requirements.txt --upgrade --force-reinstall
+
 A very important output of the script is the project-meta.yml file. 
 This contains the relations between the modules and is used to update pom.xml files etc.
 Try it:
