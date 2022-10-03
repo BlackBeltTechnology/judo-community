@@ -1084,7 +1084,7 @@ calculate_ranks(modules)
 
 _processable_modules = calculate_processable_modules(modules, process_info, module_by_name)
 
-print_dependency_graph_ascii(modules)
+print_dependency_graph_ascii(_processable_modules)
 
 # =============================== Fetch / Checkout / Reset Git
 if args.git_checkout:
