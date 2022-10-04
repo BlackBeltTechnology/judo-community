@@ -1092,8 +1092,9 @@ def build_continuous(_modules, _process_info, _module_by_name):
     while len(_modules_to_process) > 0:
         # wait_for_modules_to_release(process_info, current_updated_dependency_in_modules)
         time.sleep(15)
-        _recalculate_process_modules = False
+        _removable_modules = set()
         for _module in _modules_to_process:
+
             _process_info[_module] = {"status": "RUNNING"}
             print(
                 f"{Fore.YELLOW}Checking latest release for {Fore.GREEN}{_module.name}{Fore.YELLOW} in branch: "
@@ -1101,13 +1102,15 @@ def build_continuous(_modules, _process_info, _module_by_name):
             if _module.update_github_versions():
                 print("  NEW Version, it removed from wait list")
                 _process_info[_module] = {"status": "OK"}
-                _recalculate_process_modules = True
+                _removable_modules.add(_module)
 
-        if _recalculate_process_modules:
+        if len(_removable_modules) > 0:
             _new_modules_to_process = check_modules_for_update(modules, _module_by_name)
-            # TODO: Finish calculation - have to remove modules which have anchestors between
-            # for _processing_module in _new_modules_to_process:
-            #    set(descendants(calculate_reduced_graph(_modules), _processing_module))
+            for _new_module in _new_modules_to_process:
+                _removable_modules = _removable_modules.union(set(
+                    descendants(calculate_graph(_modules), _new_module)))
+            _new_modules_to_process = _new_modules_to_process.union(_modules_to_process)
+            _modules_to_process = _new_modules_to_process.difference(_removable_modules)
 
         if not args.dirty:
             save_modules(modules, _module_by_name)
