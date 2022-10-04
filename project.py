@@ -157,7 +157,8 @@ import webbrowser
 from argparse import RawDescriptionHelpFormatter, ArgumentParser
 from typing import Dict, Any
 
-from github import Github
+import git
+from github import Github, UnknownObjectException
 import yaml
 from xml.etree.ElementTree import Comment, register_namespace, parse, XMLParser, TreeBuilder
 from subprocess import call, check_output
@@ -173,6 +174,8 @@ from networkx.algorithms.dag import ancestors, descendants
 
 from asciidag.graph import Graph as AsciiGraph
 from asciidag.node import Node as AsciiNode
+from progressbar import progressbar, ProgressBar
+from tqdm import tqdm
 
 import argparse
 import textwrap
@@ -229,19 +232,24 @@ localbuild_arg_group.add_argument("-kc", "--keep-changes", dest="keep_changes", 
 git_arg_group = parser.add_argument_group('GIT control arguments')
 git_arg_group.add_argument("-gc", "--gitcheckout", action="store_true", dest="git_checkout", default=False,
                            help='Fetch / Reset / Checkout branch')
-git_arg_group.add_argument("-nogc", "--no-gitcheckout", nargs='*', dest="no_checkout_module",
-                           help="Don't checkout the given modules")
 git_arg_group.add_argument("-pu", "--pushupdates", action="store_true", dest="push_updates", default=False,
                            help='Push updates in projects')
 git_arg_group.add_argument("-noci", "--noci", action="store_true", dest="ci_skip", default=False,
                            help='Make commit with CI Ignore')
-git_arg_group.add_argument("-us", "--updatesubmodules", action="store_true", dest="update_submodules", default=False,
-                           help='Update submodules branches')
 
 github_arg_group = parser.add_argument_group('GitHub API control arguments')
 github_arg_group.add_argument("-fv", "--fetchversions", action="store_true", dest="fetch_github_versions",
                               default=False,
                               help='Fetch last released versions from github')
+github_arg_group.add_argument("-cb", "--createfeaturebranch", action="store", dest="create_branch",
+                              metavar='Feature name', nargs=1,
+                              help='Create feature branch')
+github_arg_group.add_argument("-sb", "--switchfeaturebranch", action="store", dest="switch_branch",
+                              metavar='Feature name', nargs=1,
+                              help='Switch to feature branch')
+github_arg_group.add_argument("-pr", "--createpr", action="store", dest="create_pr",
+                              metavar='Pull request name', nargs=1,
+                              help='Create pull requesr')
 
 pom_arg_group = parser.add_argument_group('Maven POM control arguments')
 pom_arg_group.add_argument("-up", "--updatepom", action="store_true", dest="update_pom", default=False,
@@ -286,6 +294,15 @@ process_info_server_pid = None
 
 register_namespace('', 'http://maven.apache.org/POM/4.0.0')
 pom_namespace = "{http://maven.apache.org/POM/4.0.0}"
+
+# progress_widgets = [' [',
+#           progressbar.Timer(format='elapsed time: %(elapsed)s'),
+#           '] ',
+#           progressbar.Bar('*'), ' (',
+#           progressbar.ETA(), ') ',
+#           ]
+
+github = Github(login_or_token=args.github_token)
 
 
 class CloneProgress(RemoteProgress):
@@ -374,7 +391,6 @@ class Module(object):
     def update_github_versions(self):
         if not self.is_processable():
             return
-        github = Github(login_or_token=args.github_token)
         # repository = github.get_organization(par['github'].split("/")[0]).get_repo(par['github'].split("/")[1])
         repository = github.get_repo(self.github)
         if self.branch == 'master':
@@ -459,27 +475,84 @@ class Module(object):
                 return False
         return True
 
-    def checkout_branch(self):
+    def repo(self):
         _currentDir = os.getcwd() + '/' + self.path
-        print(f"{Fore.YELLOW}Checkout: " + self.path)
-        call("git stash", shell=True, cwd=_currentDir)
-        call("git checkout " + self.branch, shell=True, cwd=_currentDir)
-        call("git pull", shell=True, cwd=_currentDir)
+        return git.Repo(_currentDir)
+
+    def checkout_branch(self):
+        _repo = self.repo()
+        print(f"{Fore.YELLOW}Checkout: " + _repo.git_dir)
+        if self.check_dirty():
+            _repo.git.stash("-m \"[AUTO STASH]\"")
+        # _repo.git.checkout(self.branch)
+        # _repo.git.pull()
+
+        _repo.git.fetch()
+        # Create a new branch
+        # repo.git.branch('my_new_branch')
+        # You need to check out the branch after creating it if you want to use it
+        _repo.git.checkout(self.branch)
+
+    def check_dirty(self):
+        _currentDir = os.getcwd() + '/' + self.path
+        repo = git.Repo(os.getcwd() + '/' + self.path)
+        return repo.is_dirty(untracked_files=True)
 
     def commit_and_push_changes(self):
-        _currentDir = os.getcwd() + '/' + self.path
-        print(f"{Fore.YELLOW}Commit and push: " + self.path)
-        call("git add .", shell=True, cwd=_currentDir)
+        _repo = self.repo()
+
+        print(f"{Fore.YELLOW}Commit and push: " + _repo.git_dir)
+        _repo.git.add(all=True)
 
         _commit_message = "[Release] Updating versions"
         if args.ci_skip:
             _commit_message = _commit_message + " [ci skip]"
-        call("git commit -m \"" + _commit_message + "\"", shell=True, cwd=_currentDir)
-        call("git push", shell=True, cwd=_currentDir)
+        _repo.index.comit(_commit_message)
+        _origin = _repo.remote(name='origin')
+        _origin.push()
+        _repo.git.push()
 
     def is_processable(self):
         return not self.ignored and self.virtual
         # (not args.module or args.module == self.name) and args.min_rank <= self.rank <= args.max_rank
+
+    def switch_branch(self, _branch_name):
+        self.branch = _branch_name
+        self.checkout_branch()
+
+    def create_branch(self, _branch_name):
+        _repo = github.get_repo(self.github)
+
+        # if self._dirty:
+        #     raise SystemExit(f"\n{Fore.RED}Repo have uncommited changes: {self.name}.")
+
+        # _hashes = list(_repo.get_commits())
+        # if len(_hashes) <= 1:
+        #     raise SystemExit(f"\n{Fore.RED}No commits found on repo: {self.name}.")
+        # _start_hash = _hashes[-1].sha
+
+        _develop = _repo.get_branch("develop")
+
+        _branch = None
+        try:
+            _branch = _repo.get_git_ref("heads/" + _branch_name)
+        except UnknownObjectException:
+            _branch = _repo.create_git_ref("refs/heads/" + _branch_name, sha=_develop.commit.sha)
+
+        self.branch = _branch_name
+        self.checkout_branch()
+
+    def create_pull_request(self, _message):
+        _repo = github.get_repo(self.github)
+        #_branch = _repo.get_git_ref("heads/" + self.branch)
+        pr = _repo.create_pull(
+            title=_message,
+            body=_message,
+            head='refs/heads/' + self.branch,
+            base='refs/heads/develop',
+            draft=True,
+            maintainer_can_modify=True
+        )
 
 
 def process_module(par, _modules, _module_by_name):
@@ -914,8 +987,8 @@ def calculate_processable_modules(_modules, _process_info, _module_by_name):
 
         _calculated_modules = _start_modules_ancestors
         if len(_terminate_descendants) > 0 or len(_terminate_ancestors) > 0:
-            _calculated_modules = _start_modules_ancestors.union(_start_modules)\
-                                    .intersection(_terminate_descendants.union(_terminate_modules))
+            _calculated_modules = _start_modules_ancestors.union(_start_modules) \
+                .intersection(_terminate_descendants.union(_terminate_modules))
 
             # print(f"{Fore.BLUE}{_module.name} {Style.RESET_ALL} ancestors (reduced with terminated): " + (
             #     ", ".join(
@@ -1088,12 +1161,38 @@ print_dependency_graph_ascii(_processable_modules)
 
 # =============================== Fetch / Checkout / Reset Git
 if args.git_checkout:
-    for module in _processable_modules:
-        if not module.virtual and not (args.no_checkout_module and module.name in args.no_checkout_module):
+    _currentDir = os.getcwd()
+    _repo = git.Repo(_currentDir)
+    # for _submodule in _repo.submodules:
+    #    print(f"{Fore.YELLOW}Update submodule {Fore.GREEN}{_submodule.name}{Style.RESET_ALL}")
+    #    _submodule.update(init=True)
+
+    _modules = tqdm(_processable_modules)
+    for _module in _modules:
+        if not module.virtual:
+            _modules.set_description(_module.name)
+            # print(f"{Fore.YELLOW}Update submodule {Fore.GREEN}{_module.name}{Style.RESET_ALL}")
+            _repo.submodule(_module.path).update(init=True)
+            # print(f"{Fore.YELLOW}Set branch {Fore.GREEN}{_module.branch}{Fore.YELLOW} for {Fore.GREEN}{_module.name}{Style.RESET_ALL}")
             module.checkout_branch()
 
 if args.fetch_github_versions:
     fetch_github_versions(modules)
+
+if args.create_branch:
+    for _module in _processable_modules:
+        if not _module.virtual and not _module.ignored:
+            _module.create_branch(args.create_branch[0])
+
+if args.switch_branch:
+    for _module in _processable_modules:
+        if not _module.virtual and not _module.ignored:
+            _module.switch_branch(args.switch_branch[0])
+
+if args.create_pr:
+    for _module in _processable_modules:
+        if not _module.virtual and not _module.ignored:
+            _module.create_pull_request(args.create_pr[0])
 
 if args.update_module_pom:
     for module in _processable_modules:
@@ -1131,23 +1230,6 @@ if args.run_postchangescripts:
                 exit(1)
             if args.push_updates:
                 module.commit_and_push_changes()
-
-# =============================== Update submodules
-if args.update_submodules:
-    currentDir = os.getcwd()
-
-    for module in _processable_modules:
-        if not module.virtual:
-            print(f"{Fore.YELLOW}Set branch {Fore.GREEN}{module.branch}{Fore.YELLOW} for {Fore.GREEN}{module.name}")
-            # call("git submodule set-branch --branch " + module.branch + " -- " + module.path, shell=True,
-            # cwd=currentDir)
-            call("git config -f .gitmodules submodule." + module.path + ".branch " + module.branch, shell=True,
-                 cwd=currentDir)
-            call("git stash", shell=True, cwd=currentDir + "/" + module.path)
-            retcode = call("git checkout " + module.branch, shell=True, cwd=currentDir + "/" + module.path)
-            if retcode != 0:
-                call("git checkout -b " + module.branch, shell=True, cwd=currentDir + "/" + module.path)
-            call("git pull", shell=True, cwd=currentDir + "/" + module.path)
 
 # ================================ Checking for updates
 
