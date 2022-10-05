@@ -92,14 +92,14 @@ This information then can be used to update pom.xml files to use the latest vers
 
 == Perform continuos build
 
-   ./project.py -sm judo-meta-psm judo-meta-jql judo-meta-expression -tm judo-platform -bs`
+   ./project.py -sm judo-meta-psm judo-meta-jql judo-meta-expression -tm judo-platform -bs
 
    It fetches versions for the given modules, updating pom.xml's, pushing and waiting for new versions. It will
    traverse graph and orchestrating that all descendants have correct and consistent version.
 
 == Switch branch
 
-    ./project.py -sm judo-meta-psm judo-meta-jql judo-meta-expression -tm judo-platform -sb develop`
+    ./project.py -sm judo-meta-psm judo-meta-jql judo-meta-expression -tm judo-platform -sb develop
 
     Switch branches back to develop for the given modules.
 
@@ -274,10 +274,10 @@ github_arg_group.add_argument("-nf", "--newfeature", action="store", dest="new_f
 github_arg_group.add_argument("-ub", "--updatebranch", action="store_true", dest="update_branch",
                               default=False,
                               help='Update checked out branches in project-meta.yml')
-github_arg_group.add_argument("-cbr", "--createfeaturebranch", action="store", dest="create_branch",
+github_arg_group.add_argument("-cbr", "--createbranch", action="store", dest="create_branch",
                               metavar='Feature name', nargs=1,
                               help='Create branch')
-github_arg_group.add_argument("-sbr", "--switchfeaturebranch", action="store", dest="switch_branch",
+github_arg_group.add_argument("-sbr", "--switchbranch", action="store", dest="switch_branch",
                               metavar='Feature name', nargs=1,
                               help='Switch to branch')
 github_arg_group.add_argument("-cpr", "--createpr", action="store", dest="create_pr",
