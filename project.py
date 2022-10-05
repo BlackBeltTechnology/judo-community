@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 """
-This script provides useful utilities for working with Judo project source code.
-To install make sure you are in the judo-ng directory.
+This script provides useful utilities for working with JUDO project source code.
+To install make sure you are in the base JUDO project directory.
 
 1a. Install with pyenv. 
 
@@ -67,6 +67,14 @@ Try it:
 
 will create an SVG file showing the dependencies between the projects.
 
+== Project dependencies
+
+The project dependencies defined as a DAG (Directed Acyclic Graph)
+With this tool operations can be performed in the whole graph and some part of it.
+When you want to define nodes where the processing start of, use -sm switch,
+and define what is the target project with the -tm switches. The logic
+will calculate all projects between.
+
 == Update project-meta.yml to contain the latest version in the remote repository
 
     ./project.py -fv -gh <YOUR_GITHUB_TOKEN_HERE>
@@ -74,15 +82,26 @@ will create an SVG file showing the dependencies between the projects.
 The -fv option will check the latest release of all the modules and update the project-meta.yml file accordingly.
 This information then can be used to update pom.xml files to use the latest versions of the modules.
 
-== Change the dependencies of a given module to the latest versions
-Assuming you've already updated the versions in the project-meta.yml file, you can update one module's dependencies to
-the latest versions:
 
-    ./project.py -ump <module name>
+== Create for branches for projects
 
-You can do the fetching and the updating in one step:
+   ./project.py -sm judo-meta-psm -tm judo-platform -nf feature/JNG-3834_TestCI "JNG-3834 Test CI capability"`
 
-    ./project.py -fv -ump <module_name> -gh <github_token>
+   It creates feature branch, create an empty commit and create draft pull request for all projects between judo-meta-psm
+   and judo-platform
+
+== Perform continous build
+
+   ./project.py -sm judo-meta-psm judo-meta-jql judo-meta-expression -tm judo-platform -bs`
+
+   It fetches versions for the given modules, updating pom.xml's, pushing and waiting for new versions. It will
+   traverse graph and orchestrating that all descendants have correct and consistent version.
+
+== Switch branch
+
+    ./project.py -sm judo-meta-psm judo-meta-jql judo-meta-expression -tm judo-platform -sb develop`
+
+    Switch branches back to develop for the given modules.
 
 == Execute build locally with module and modules depending on it recursively to snapshot version
 
@@ -112,8 +131,18 @@ In this case the modules between start and terminate modules will be built.
 
     ./project.py -bs -sm judo-meta-jsl -tm judo-runtime-core-jsl
 
+== Change the dependencies of a given module to the latest versions
+Assuming you've already updated the versions in the project-meta.yml file, you can update one module's dependencies to
+the latest versions:
 
-= Releasing using the script
+    ./project.py -ump <module name>
+
+You can do the fetching and the updating in one step:
+
+    ./project.py -fv -ump <module_name> -gh <github_token>
+
+
+== Releasing using the script
 Always release from a separate local repository, not your working copy.
 
 For example clone again:
@@ -126,11 +155,6 @@ Make sure everything locally is up to date:
     git submodule update --recursive
     ./project.py -fv -gc -gh $(cat ~/githubtoken)
 
-You can switch all submodules to the project-meta defined branches and pull it 
-(it stash all uncommitted changes):
-
-    ./project.py -us
-
 Switch to the correct tatami branch:
 
     cd runtime/judo-tatami
@@ -139,7 +163,7 @@ Switch to the correct tatami branch:
 
 Start the builds:
 
-    ./project.py -pu -up -cu -gh  $(cat ~/githubtoken)
+    ./project.py -ib -gh  $(cat ~/githubtoken)
 
 When working an HTTP server run, you can see the process:
 
