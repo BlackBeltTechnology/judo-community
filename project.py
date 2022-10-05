@@ -204,6 +204,9 @@ general_arg_group.add_argument("-sg", "--graphviz", action="store_true", dest="g
                                help='Save graphviz representation of current state')
 general_arg_group.add_argument("-d", "--dirty", action="store_true", dest="dirty", default=False,
                                help='Do not update yaml')
+general_arg_group.add_argument("-ib", "--integration_build", action="store_true", dest="integration_build",
+                               default=False,
+                               help='Continous integration build. (same as -fv -pu -up -cu)')
 general_arg_group.add_argument("-cu", "--continous", action="store_true", dest="continous_update", default=False,
                                help='Continuously update / fetch / wait until last level')
 general_arg_group.add_argument("-sm", "--start-modules", action="store", dest="start_modules", default=None,
@@ -241,13 +244,16 @@ github_arg_group = parser.add_argument_group('GitHub API control arguments')
 github_arg_group.add_argument("-fv", "--fetchversions", action="store_true", dest="fetch_github_versions",
                               default=False,
                               help='Fetch last released versions from github')
-github_arg_group.add_argument("-cb", "--createfeaturebranch", action="store", dest="create_branch",
+github_arg_group.add_argument("-nf", "--newfeature", action="store", dest="new_feature",
+                              metavar='branch message', nargs=2,
+                              help='Create feature branch and pull request. (same as -cbr and -cpr)')
+github_arg_group.add_argument("-cbr", "--createfeaturebranch", action="store", dest="create_branch",
                               metavar='Feature name', nargs=1,
-                              help='Create feature branch')
-github_arg_group.add_argument("-sb", "--switchfeaturebranch", action="store", dest="switch_branch",
+                              help='Create branch')
+github_arg_group.add_argument("-sbr", "--switchfeaturebranch", action="store", dest="switch_branch",
                               metavar='Feature name', nargs=1,
-                              help='Switch to feature branch')
-github_arg_group.add_argument("-pr", "--createpr", action="store", dest="create_pr",
+                              help='Switch to branch')
+github_arg_group.add_argument("-cpr", "--createpr", action="store", dest="create_pr",
                               metavar='Pull request name', nargs=1,
                               help='Create pull requesr')
 
@@ -389,7 +395,7 @@ class Module(object):
         self.dependencies = dependencies
 
     def update_github_versions(self):
-        if not self.is_processable():
+        if self.ignored:
             return
         # repository = github.get_organization(par['github'].split("/")[0]).get_repo(par['github'].split("/")[1])
         repository = github.get_repo(self.github)
@@ -407,8 +413,8 @@ class Module(object):
                         return False
         else:
             for tag in repository.get_tags():
-                print(" -> " + tag.name)
-                if tag.name and re.match(r'^v.*' + self.branch + '.*', tag.name):
+                _branch = re.sub(r"[\ #,\\\"'/;-]", "_", self.branch)
+                if tag.name and re.match(r'^v.*' + _branch + '.*', tag.name):
                     ver = tag.name.strip()[1:]  # .encode('ascii', 'ignore')                  
                     if self.version != ver:
                         print(
@@ -424,7 +430,7 @@ class Module(object):
         if self.path is None:
             return False
 
-        if not self.is_processable():
+        if self.ignored or self.virtual:
             return False
 
         print(f"{Fore.YELLOW}Checking POM: {Fore.GREEN}{self.path}/pom.xml")
@@ -507,14 +513,22 @@ class Module(object):
         _commit_message = "[Release] Updating versions"
         if args.ci_skip:
             _commit_message = _commit_message + " [ci skip]"
-        _repo.index.comit(_commit_message)
+        _repo.index.commit(_commit_message)
         _origin = _repo.remote(name='origin')
         _origin.push()
         _repo.git.push()
 
-    def is_processable(self):
-        return not self.ignored and self.virtual
-        # (not args.module or args.module == self.name) and args.min_rank <= self.rank <= args.max_rank
+    def create_and_push_empty_commit(self, _commit_message):
+        _repo = self.repo()
+
+        print(f"{Fore.YELLOW}Create empty commit and push: " + _repo.git_dir)
+        _repo.git.add(all=True)
+
+        _repo.index.commit(_commit_message)
+        _origin = _repo.remote(name='origin')
+        _origin.push()
+        _repo.git.push()
+
 
     def switch_branch(self, _branch_name):
         self.branch = _branch_name
@@ -541,10 +555,12 @@ class Module(object):
 
         self.branch = _branch_name
         self.checkout_branch()
+        self.create_and_push_empty_commit("Initial feature commit [ci skip]")
 
     def create_pull_request(self, _message):
         _repo = github.get_repo(self.github)
         #_branch = _repo.get_git_ref("heads/" + self.branch)
+        print(f"{Fore.YELLOW}Create pull request in {self.name} on branch {self.branch}")
         pr = _repo.create_pull(
             title=_message,
             body=_message,
@@ -728,6 +744,8 @@ def get_request_handler(_modules, _process_info):
                     _g.nodes[node]['fillcolor'] = "yellow"
                 if _process_info.get(node, {"status": ""}).get("status") == "OK":
                     _g.nodes[node]['fillcolor'] = "green"
+                if _process_info.get(node, {"status": ""}).get("status") == "SKIPPED":
+                    _g.nodes[node]['fillcolor'] = "darkseagreen2"
 
             svg = to_pydot(_g).create_svg().decode("utf-8")
 
@@ -760,49 +778,54 @@ def start_process_info_server(_modules, _process_info):
     return httpd
 
 
-def check_modules_for_update(_modules, _module_by_name):
+def check_modules_for_update(_modules, _module_by_name, _processing_modules = set()):
     # Check implications on modules
-    _updated_modules = []
+    _updated_modules = set()
     for _module in _modules:
-        if _module.is_processable():
+        if not _module.ignored and not _module.virtual:
             # print("Checking dependency update in POM: " + module.name)
             if _module.update_dependency_versions_in_pom(False):
-                _updated_modules.append(_module)
-
-    _current_updated_dependency_in_modules = _updated_modules
+                _updated_modules.add(_module)
 
     # Removing modules which have dependency on current modules
-    for _module in _updated_modules:
-        _current_updated_dependency_in_modules = _current_updated_dependency_in_modules.difference(
-            set(ancestors(calculate_reduced_graph(_modules), _module)))
+    _removable_modules = set()
+    for _module in _updated_modules.union(_processing_modules):
+        _removable_modules = _removable_modules.union(set(
+            ancestors(calculate_graph(_modules), _module)))
 
-    for _module in _current_updated_dependency_in_modules:
-        if args.update_pom:
+    _updated_modules = _updated_modules.difference(_removable_modules)
+
+    print(f"\n{Fore.RED}Versions updated for modules :\n" + (
+        f"\n".join(map(lambda _m: f"{Fore.GREEN}-{_m.name} ({_m.rank}){Style.RESET_ALL}",
+                       _updated_modules))) + f"{Style.RESET_ALL}\n")
+
+    for _module in _updated_modules:
+        if args.update_pom or args.integration_build:
             print(f"{Fore.YELLOW}Writing changes to {Fore.GREEN}{_module.name}")
             _module.update_dependency_versions_in_pom(True)
 
-        if args.update_pom and not args.run_postchangescripts:
+        if (args.update_pom or args.integration_build) and not args.run_postchangescripts:
             print("Running post change scripts")
             if not _module.call_postchangescripts():
                 print(f"\n{Fore.RED}Error when calling post change script on {_module.name}.")
                 if not args.dirty:
                     save_modules(_modules, _module_by_name)
                 exit(1)
-        if args.push_updates:
+        if args.push_updates or args.integration_build:
             print("Pushing updates to " + _module.name)
             _module.commit_and_push_changes()
-    return _current_updated_dependency_in_modules
+    return _updated_modules
 
 
 # =============================== Initial version fetching
 
 def fetch_github_versions(_modules):
     for _module in _modules:
-        #        if _module.is_processable():
-        print(
-            f"{Fore.YELLOW}Checking latest release for {Fore.GREEN}{_module.name}{Fore.YELLOW} in branch: "
-            f"{Fore.GREEN}{_module.branch}")
-        _module.update_github_versions()
+        if not _module.ignored:
+            print(
+                f"{Fore.YELLOW}Checking latest release for {Fore.GREEN}{_module.name}{Fore.YELLOW} in branch: "
+                f"{Fore.GREEN}{_module.branch}")
+            _module.update_github_versions()
 
 
 def current_snapshot_version(_module):
@@ -1085,6 +1108,10 @@ def build_snapshot(_modules, _process_info, _module_by_name):
 
 
 def build_continuous(_modules, _process_info, _module_by_name):
+    print(f"\n{Fore.YELLOW}Continous build for modules :\n" + (
+        f"\n".join(map(lambda _m: f"- {Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}",
+                       _modules))) + f"{Style.RESET_ALL}\n")
+
     _modules_to_process = check_modules_for_update(_modules, _module_by_name)
     for _module in _modules:
         _process_info[module] = {"status": "WAITING"}
@@ -1105,15 +1132,21 @@ def build_continuous(_modules, _process_info, _module_by_name):
                 _removable_modules.add(_module)
 
         if len(_removable_modules) > 0:
-            _new_modules_to_process = check_modules_for_update(modules, _module_by_name)
-            for _new_module in _new_modules_to_process:
+            _modules_to_process = _modules_to_process.difference(_removable_modules)
+            _new_modules_to_process = check_modules_for_update(_modules, _module_by_name, _processing_modules=_modules_to_process)
+            for _new_module in _new_modules_to_process.union(_modules_to_process):
                 _removable_modules = _removable_modules.union(set(
-                    descendants(calculate_graph(_modules), _new_module)))
+                    ancestors(calculate_graph(_modules), _new_module)))
+
             _new_modules_to_process = _new_modules_to_process.union(_modules_to_process)
             _modules_to_process = _new_modules_to_process.difference(_removable_modules)
 
-        if not args.dirty:
-            save_modules(modules, _module_by_name)
+            print(f"\n{Fore.YELLOW}Waiting for modules :\n" + (
+                f"\n".join(map(lambda _m: f"{Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}",
+                               _modules_to_process))) + f"{Style.RESET_ALL}\n")
+
+            if not args.dirty:
+                save_modules(modules, _module_by_name)
 
 
 def is_port_in_use(_port):
@@ -1142,10 +1175,6 @@ def server_shutdown():
         process_info_server_pid.join()
     print(f"{Fore.YELLOW}Stop server\n{Style.RESET_ALL}")
 
-
-# ============================== Check argument
-if args.continous_update and args.project:
-    raise SystemExit(f"{Fore.ERROR}Continuous update cannot be use when project is filtered")
 
 # ============================== Mandatory module init
 print(f"{Fore.YELLOW}Load modules")
@@ -1182,20 +1211,30 @@ if args.git_checkout:
 if args.fetch_github_versions:
     fetch_github_versions(modules)
 
-if args.create_branch:
+if args.integration_build:
+    fetch_github_versions(_processable_modules)
+
+if args.new_feature:
+    for _module in _processable_modules:
+        if not _module.virtual and not _module.ignored:
+            _module.create_branch(args.new_feature[0])
+            _module.create_pull_request(args.new_feature[1])
+
+if args.create_branch and not args.new_feature:
     for _module in _processable_modules:
         if not _module.virtual and not _module.ignored:
             _module.create_branch(args.create_branch[0])
 
-if args.switch_branch:
+if args.switch_branch and not args.new_feature:
     for _module in _processable_modules:
         if not _module.virtual and not _module.ignored:
             _module.switch_branch(args.switch_branch[0])
 
-if args.create_pr:
+if args.create_pr and not args.new_feature:
     for _module in _processable_modules:
         if not _module.virtual and not _module.ignored:
             _module.create_pull_request(args.create_pr[0])
+
 
 if args.update_module_pom:
     for module in _processable_modules:
@@ -1225,18 +1264,18 @@ if args.graphviz:
 # =============================== Force postchange run
 if args.run_postchangescripts:
     for module in _processable_modules:
-        if module.is_processable():
+        if not module.ignored and not module.virtual:
             if not module.call_postchangescripts():
                 print(f"\n{Fore.RED}Error when calling post change script on {module.name}.")
                 if not args.dirty:
                     save_modules(modules, module_by_name)
                 exit(1)
-            if args.push_updates:
+            if args.push_updates or args.integration_build:
                 module.commit_and_push_changes()
 
 # ================================ Checking for updates
-
-if args.continous_update:
+if args.continous_update or args.integration_build:
+    server_start(_processable_modules, process_info)
     build_continuous(_processable_modules, process_info, module_by_name)
 
 if args.relnotes:
