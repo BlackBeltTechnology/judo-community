@@ -83,14 +83,14 @@ The -fv option will check the latest release of all the modules and update the p
 This information then can be used to update pom.xml files to use the latest versions of the modules.
 
 
-== Create for branches for projects
+== Create branches for projects
 
-   ./project.py -sm judo-meta-psm -tm judo-platform -nf feature/JNG-3834_TestCI "JNG-3834 Test CI capability"`
+   ./project.py -sm judo-meta-psm -tm judo-platform -nf feature/JNG-3834_TestCI "JNG-3834 Test CI capability"
 
    It creates feature branch, create an empty commit and create draft pull request for all projects between judo-meta-psm
    and judo-platform
 
-== Perform continous build
+== Perform continuos build
 
    ./project.py -sm judo-meta-psm judo-meta-jql judo-meta-expression -tm judo-platform -bs`
 
@@ -271,6 +271,9 @@ github_arg_group.add_argument("-fv", "--fetchversions", action="store_true", des
 github_arg_group.add_argument("-nf", "--newfeature", action="store", dest="new_feature",
                               metavar='branch message', nargs=2,
                               help='Create feature branch and pull request. (same as -cbr and -cpr)')
+github_arg_group.add_argument("-ub", "--updatebranch", action="store_true", dest="update_branch",
+                              default=False,
+                              help='Update checked out branches in project-meta.yml')
 github_arg_group.add_argument("-cbr", "--createfeaturebranch", action="store", dest="create_branch",
                               metavar='Feature name', nargs=1,
                               help='Create branch')
@@ -580,6 +583,11 @@ class Module(object):
         self.branch = _branch_name
         self.checkout_branch()
         self.create_and_push_empty_commit("Initial feature commit [ci skip]")
+
+    def update_branch_from_git(self):
+        # get current branch
+        _repo = self.repo()
+        self.branch = _repo.active_branch.name
 
     def create_pull_request(self, _message):
         _repo = github.get_repo(self.github)
@@ -1243,6 +1251,11 @@ if args.new_feature:
         if not _module.virtual and not _module.ignored:
             _module.create_branch(args.new_feature[0])
             _module.create_pull_request(args.new_feature[1])
+
+if args.update_branch:
+    for _module in _processable_modules:
+        if not _module.virtual and not _module.ignored:
+            _module.update_branch_from_git()
 
 if args.create_branch and not args.new_feature:
     for _module in _processable_modules:
