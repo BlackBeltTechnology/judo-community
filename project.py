@@ -190,6 +190,7 @@ from subprocess import call, check_output
 import time
 import shutil
 from git import RemoteProgress
+from packaging import version
 
 import networkx as nx
 from networkx.drawing.nx_pydot import write_dot, to_pydot
@@ -434,6 +435,10 @@ class Module(object):
                         print(
                             f"{Fore.YELLOW}Updating release version of {Fore.GREEN}{self.name}{Fore.YELLOW}: "
                             f"{Fore.GREEN}{self.version} {Fore.YELLOW}=>{Fore.GREEN} {ver}")
+                        # if version.parse(ver) < version.parse(self.version):
+                        #     raise SystemExit(
+                        #         f"{Fore.RED}{version.parse(ver)} in properties smaller than {version.parse(self.version)} on project-meta.yml: "
+                        #         f"{self.name}")
                         self.version = ver
                         return True
                     else:
@@ -447,6 +452,10 @@ class Module(object):
                         print(
                             f"{Fore.YELLOW}Updating version of {Fore.GREEN}{self.name}{Fore.YELLOW}: "
                             f"{Fore.GREEN}{self.version} {Fore.YELLOW}=>{Fore.GREEN} {ver}")
+                        # if version.parse(ver) < version.parse(self.version):
+                        #     raise SystemExit(
+                        #         f"{Fore.RED}{version.parse(ver)} in properties smaller than {version.parse(self.version)} on project-meta.yml: "
+                        #         f"{self.name}")
                         self.version = ver
                         return True
                     else:
@@ -477,6 +486,9 @@ class Module(object):
                 raise SystemExit(f"{Fore.RED}{dependency.property} have to be defined in properties on pom.xml: "
                                  f"{self.name}")
             if ref_prop_element.text != dependency.version:
+                # if version.parse(dependency.version) < version.parse(ref_prop_element.text):
+                #     raise SystemExit(f"{Fore.RED}{version.parse(dependency.version)} in properties smaller than {version.parse(ref_prop_element.text)} on pom.xml: "
+                #                      f"{self.name}")
                 ref_prop_element.text = dependency.version
                 update = True
         # print(pom)
@@ -525,6 +537,9 @@ class Module(object):
         # repo.git.branch('my_new_branch')
         # You need to check out the branch after creating it if you want to use it
         _repo.git.checkout(self.branch)
+        _repo.git.reset()
+#        _repo.git.pull()
+        _repo.remotes.origin.pull()
 
     def check_dirty(self):
         _currentDir = os.getcwd() + '/' + self.path
@@ -559,7 +574,8 @@ class Module(object):
 
     def switch_branch(self, _branch_name):
         self.branch = _branch_name
-        self.checkout_branch()
+        if not self.virtual:
+            self.checkout_branch()
 
     def create_branch(self, _branch_name):
         _repo = github.get_repo(self.github)
@@ -1233,12 +1249,12 @@ if args.git_checkout:
 
     _modules = tqdm(_processable_modules)
     for _module in _modules:
-        if not module.virtual:
+        if not _module.virtual:
             _modules.set_description(_module.name)
             # print(f"{Fore.YELLOW}Update submodule {Fore.GREEN}{_module.name}{Style.RESET_ALL}")
             _repo.submodule(_module.path).update(init=True)
             # print(f"{Fore.YELLOW}Set branch {Fore.GREEN}{_module.branch}{Fore.YELLOW} for {Fore.GREEN}{_module.name}{Style.RESET_ALL}")
-            module.checkout_branch()
+            _module.checkout_branch()
 
 if args.fetch_github_versions:
     fetch_github_versions(modules)
