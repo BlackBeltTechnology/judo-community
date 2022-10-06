@@ -1095,6 +1095,7 @@ def build_snapshot(_modules, _process_info, _module_by_name):
         map(lambda _v: f"{Fore.WHITE}{_v.split('=')[0]} {Fore.YELLOW}={Fore.GREEN} {_v.split('=')[1]}{Style.RESET_ALL}",
             _version_args)))
 
+    _processable_modules = set(_modules)
     if args.continue_module:
         _start_module_name = args.continue_module[0]
         _build_from_index = list(map(lambda _m: _m.name, _modules)).index(_start_module_name)
@@ -1123,7 +1124,7 @@ def build_snapshot(_modules, _process_info, _module_by_name):
                         f"\nTo retry, run {Fore.YELLOW}{_retry_command} -c {_module.name}{Style.RESET_ALL}")
                 _value = None
 
-                if _dependency_module in _modules and _dependency_module.p2:
+                if _dependency_module in _processable_modules and _dependency_module.p2:
                     _value = "file:" + os.path.abspath(
                         os.getcwd() + "/" + _dependency_module.path + "/" + _dependency_module.p2['localsite'])
                 elif _locations_key in _releaseLocs.keys():
