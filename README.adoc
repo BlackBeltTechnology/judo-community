@@ -200,7 +200,7 @@ class TestSpringApplicationTests {
 
 == Documentation
 
-For a more detailed view on JUDO and it's modules, please check the link:docs/README.adoc[Documentation] section.
+Our official documentation page can be found at link:https://documentation.judo.technology[https://documentation.judo.technology].
 
 == Questions
 
