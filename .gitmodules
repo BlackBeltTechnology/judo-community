@@ -94,3 +94,7 @@
 	path = judo-meta-expression-psm
 	url = git@github.com:BlackBeltTechnology/judo-meta-expression-psm.git
 	branch = develop
+[submodule "jsl.tmbundle"]
+	path = jsl.tmbundle
+	url = git@github.com:BlackBeltTechnology/jsl.tmbundle.git
+	branch = develop
