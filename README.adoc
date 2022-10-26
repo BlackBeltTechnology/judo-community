@@ -51,7 +51,7 @@ architectural glue code and copying design patterns.
 
 === JDK 11
 
-We currently only support OpenJDK 11. Our recommended vendor is https://www.azul.com/downloads/?version=java-11-lts&package=jdk[Zulu JDK]
+The JUDO platform is developed and tested against OpenJDK 11. Our recommended vendor is https://www.azul.com/downloads/?version=java-11-lts&package=jdk[Zulu JDK]
 
 Checking your JDK version:
 
@@ -69,7 +69,7 @@ OpenJDK Runtime Environment Zulu11.58+15-CA (build 11.0.16+8-LTS)
 ...
 ----
 
-> The key here the version number, which in our case is: `11.0.16`. The version number **MUST** start with `11`!
+> The key here the version number, which in our case is: `11.0.16`. The version number should start with `11`, however the gerenerated code and applications could run on more current JDK versions.
 
 === Maven 3.8.x
 
