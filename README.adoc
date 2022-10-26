@@ -145,15 +145,13 @@ has a `derived` attribute called `fullName`.
 ```
 model Test
 
-type string String(max-length = 128)
+type string String(min-size = 0, max-size = 128);
 
 entity Person {
-    field String firstName
-    field String lastName
-    derived String fullName => self.firstName + " " \
-        + self.lastName ;
+    field String firstName;
+    field String lastName;
+    derived String fullName => self.firstName + " " + self.lastName;
 }
-
 ```
 
 ==== TestSpringApplication.java
