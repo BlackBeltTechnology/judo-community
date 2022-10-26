@@ -26,6 +26,7 @@ ifdef::env-github[]
 <p align="center">
   <a href="https://github.com/BlackBeltTechnology/judo-community" target="_blank"><img src="https://img.shields.io/badge/license-EPL%20v2.0-blue.svg" alt="License" /></a>
   <a href="https://discord.gg/RcyHnBndNU" target="_blank"><img src="https://img.shields.io/discord/918892501434241054" alt="Discord" /></a>
+  <a href="https://documentation.judo.technology" target="_blank"><img src="https://img.shields.io/badge/docs-passing-brightgreen" alt="Documentation" /></a>
 </p>
 ++++
 endif::[]
@@ -33,6 +34,7 @@ ifndef::env-github[]
 [.text-center]
 image:https://img.shields.io/badge/license-EPL%20v2.0-blue.svg[link="https://github.com/BlackBeltTechnology/judo-community"]
 image:https://img.shields.io/discord/918892501434241054[link="https://discord.gg/RcyHnBndNU"]
+image:https://img.shields.io/badge/docs-passing-brightgreen[link="https://documentation.judo.technology"]
 endif::[]
 
 == What is low-code?
