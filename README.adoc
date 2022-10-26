@@ -143,7 +143,7 @@ The model defines a custom type named `String`, an entity `Person` which  __- fo
 has a `derived` attribute called `fullName`.
 
 ```
-model Test
+model Test;
 
 type string String(min-size = 0, max-size = 128);
 
