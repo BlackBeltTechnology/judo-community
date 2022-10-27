@@ -219,6 +219,7 @@
   - judo-meta-expression
   - judo-meta-jql
   - judo-meta-measure
+  - epsilon-runtime
   - epsilon-runtime-eclipse
   - emf-genmodel-generator
   - judo-genmodel-generator
@@ -616,7 +617,7 @@
   property: judo-jsl-springboot-parent-version
   rank: 7
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-parent.git
-  version: 1.0.1
+  version: 1.0.3
   virtual: false
 - branch: master
   dependencies:
@@ -628,5 +629,5 @@
   property: judo-jsl-springboot-archetype-version
   rank: 8
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-archetype.git
-  version: 1.0.1
+  version: 1.0.3
   virtual: false
