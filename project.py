@@ -231,8 +231,8 @@ general_arg_group.add_argument("-d", "--dirty", action="store_true", dest="dirty
                                help='Do not update yaml')
 general_arg_group.add_argument("-ib", "--integration_build", action="store_true", dest="integration_build",
                                default=False,
-                               help='Continous integration build. (same as -fv -pu -up -cu)')
-general_arg_group.add_argument("-cu", "--continous", action="store_true", dest="continous_update", default=False,
+                               help='Continuous integration build. (same as -fv -pu -up -cu)')
+general_arg_group.add_argument("-cu", "--continuous", action="store_true", dest="continuous_update", default=False,
                                help='Continuously update / fetch / wait until last level')
 general_arg_group.add_argument("-sm", "--start-modules", action="store", dest="start_modules", default=None,
                                metavar='MODULE...', nargs="*",
@@ -270,8 +270,11 @@ github_arg_group.add_argument("-fv", "--fetchversions", action="store_true", des
                               default=False,
                               help='Fetch last released versions from github')
 github_arg_group.add_argument("-nf", "--newfeature", action="store", dest="new_feature",
-                              metavar='branch message', nargs=2,
-                              help='Create feature branch and pull request. (same as -cbr and -cpr)')
+                              metavar='branch message', nargs='+',
+                              help='Create feature branch and pull request. (same as -cbr and -cpr). '
+                                   'If branch name contains spaces, it will be replaced with underscores ("_"). '
+                                   'If message is left empty, original, passed branch parameter will be used as PR title. '
+                                   'If message/or branch name start with for example feature/ then it will be removed for the PR\'s title and body.')
 github_arg_group.add_argument("-ub", "--updatebranch", action="store_true", dest="update_branch",
                               default=False,
                               help='Update checked out branches in project-meta.yml')
@@ -283,7 +286,7 @@ github_arg_group.add_argument("-sbr", "--switchbranch", action="store", dest="sw
                               help='Switch to branch')
 github_arg_group.add_argument("-cpr", "--createpr", action="store", dest="create_pr",
                               metavar='Pull request name', nargs=1,
-                              help='Create pull requesr')
+                              help='Create pull request')
 
 pom_arg_group = parser.add_argument_group('Maven POM control arguments')
 pom_arg_group.add_argument("-up", "--updatepom", action="store_true", dest="update_pom", default=False,
@@ -526,7 +529,7 @@ class Module(object):
 
     def checkout_branch(self):
         _repo = self.repo()
-        print(f"{Fore.YELLOW}Checkout: " + _repo.git_dir)
+        print(f"{Fore.YELLOW}Checkout branch {Fore.GREEN}{self.branch} {Fore.YELLOW}in {Fore.GREEN}{_repo.git_dir}")
         if self.check_dirty():
             _repo.git.stash("-m \"[AUTO STASH]\"")
         # _repo.git.checkout(self.branch)
@@ -552,7 +555,11 @@ class Module(object):
         print(f"{Fore.YELLOW}Commit and push: " + _repo.git_dir)
         _repo.git.add(all=True)
 
-        _commit_message = "[Release] Updating versions"
+        prefix = ""
+        search = re.search("(JNG-\\d+)", self.branch)
+        if search:
+            prefix = search.group(0) + " "
+        _commit_message = f"{prefix}[Release] Updating versions"
         if args.ci_skip:
             _commit_message = _commit_message + " [ci skip]"
         _repo.index.commit(_commit_message)
@@ -571,7 +578,6 @@ class Module(object):
         _origin.push()
         _repo.git.push()
 
-
     def switch_branch(self, _branch_name):
         self.branch = _branch_name
         if not self.virtual:
@@ -580,8 +586,22 @@ class Module(object):
     def create_branch(self, _branch_name):
         _repo = github.get_repo(self.github)
 
+        if " " in _branch_name:
+            print(f"{Fore.YELLOW}Sanitizing branch name: {Fore.GREEN}{_branch_name} {Fore.YELLOW}=> {Fore.GREEN}{_branch_name.replace(' ', '_')}")
+            _branch_name = _branch_name.replace(" ", "_")
+
+        found = False
+        for branch in _repo.get_branches():
+            if str.endswith(branch.name, _branch_name):
+                found = True
+                break
+        if found:
+            print(f"{Fore.BLUE}Branch already exists with name '{_branch_name}'")
+            self.switch_branch(_branch_name)
+            return
+
         # if self._dirty:
-        #     raise SystemExit(f"\n{Fore.RED}Repo have uncommited changes: {self.name}.")
+        #     raise SystemExit(f"\n{Fore.RED}Repo have uncommitted changes: {self.name}.")
 
         # _hashes = list(_repo.get_commits())
         # if len(_hashes) <= 1:
@@ -598,7 +618,11 @@ class Module(object):
 
         self.branch = _branch_name
         self.checkout_branch()
-        self.create_and_push_empty_commit("Initial feature commit [ci skip]")
+        prefix = ""
+        search = re.search("(JNG-\\d+)", _branch_name)
+        if search:
+            prefix = search.group(0) + " "
+        self.create_and_push_empty_commit(f"{prefix}Initial feature commit [ci skip]")
 
     def update_branch_from_git(self):
         # get current branch
@@ -607,16 +631,24 @@ class Module(object):
 
     def create_pull_request(self, _message):
         _repo = github.get_repo(self.github)
-        #_branch = _repo.get_git_ref("heads/" + self.branch)
-        print(f"{Fore.YELLOW}Create pull request in {self.name} on branch {self.branch}")
-        pr = _repo.create_pull(
-            title=_message,
-            body=_message,
-            head='refs/heads/' + self.branch,
-            base='refs/heads/develop',
-            draft=True,
-            maintainer_can_modify=True
-        )
+        # _branch = _repo.get_git_ref("heads/" + self.branch)
+
+        match = re.match("\\w+/(JNG-\\d+.*)", _message)
+        if match:
+            _message = match.group(1)
+
+        try:
+            print(f"{Fore.YELLOW}Creating pull request in {Fore.GREEN}{self.name} {Fore.YELLOW}on branch {Fore.GREEN}{self.branch}")
+            _repo.create_pull(
+                title=_message,
+                body=_message,
+                head='refs/heads/' + self.branch,
+                base='refs/heads/develop',
+                draft=True,
+                maintainer_can_modify=True
+            )
+        except Exception as e:
+            print(f"{Fore.RED}Creating pull request in {self.name} on branch {self.branch} failed: {e}")
 
 
 def process_module(par, _modules, _module_by_name):
@@ -1054,7 +1086,7 @@ def calculate_processable_modules(_modules, _process_info, _module_by_name):
                     calculate_graph(_available_modules), _module_terminate)))
                 _terminate_descendants = _terminate_descendants.union(set(descendants(
                     calculate_graph(_available_modules), _module_terminate)))
-                # the required modules is the intersection of terminate modules's descendanes and module's ascendents
+                # the required modules is the intersection of terminate modules' descendants and module's ascendants
 
         _calculated_modules = _start_modules_ancestors
         if len(_terminate_descendants) > 0 or len(_terminate_ancestors) > 0:
@@ -1157,7 +1189,7 @@ def build_snapshot(_modules, _process_info, _module_by_name):
 
 
 def build_continuous(_modules, _process_info, _module_by_name):
-    print(f"\n{Fore.YELLOW}Continous build for modules :\n" + (
+    print(f"\n{Fore.YELLOW}Continuous build for modules :\n" + (
         f"\n".join(map(lambda _m: f"- {Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}",
                        _modules))) + f"{Style.RESET_ALL}\n")
 
@@ -1266,8 +1298,16 @@ if args.integration_build:
 if args.new_feature:
     for _module in _processable_modules:
         if not _module.virtual and not _module.ignored:
-            _module.create_branch(args.new_feature[0])
-            _module.create_pull_request(args.new_feature[1])
+            new_feature_parameters = args.new_feature
+            if len(new_feature_parameters) > 2:
+                print(f"{Fore.RED} WARNING! {Fore.YELLOW}new feature parameters are ignored from the 3rd one and onwards.")
+
+            _module.create_branch(new_feature_parameters[0])
+
+            if len(new_feature_parameters) > 1 and new_feature_parameters[1]:
+                _module.create_pull_request(args.new_feature[1])
+            else:
+                _module.create_pull_request(new_feature_parameters[0])
 
 if args.update_branch:
     for _module in _processable_modules:
@@ -1328,7 +1368,7 @@ if args.run_postchangescripts:
                 module.commit_and_push_changes()
 
 # ================================ Checking for updates
-if args.continous_update or args.integration_build:
+if args.continuous_update or args.integration_build:
     server_start(_processable_modules, process_info)
     build_continuous(_processable_modules, process_info, module_by_name)
 
@@ -1399,7 +1439,7 @@ if args.relnotes:
                     log_output = check_output(command, shell=True, cwd=currentDir + "/" + module.path)
 
                     for line in log_output.splitlines():
-                        m = re.search('JNG-\d+', line.decode())
+                        m = re.search('JNG-\\d+', line.decode())
                         if m:
                             issues.add(m.group())
 
@@ -1407,7 +1447,7 @@ if args.relnotes:
         command = f"git log --pretty=oneline"
         log_output = check_output(command, shell=True, cwd=currentDir + "/" + module.path)
         for line in log_output.splitlines():
-            m = re.search('JNG-\d+', line.decode())
+            m = re.search('JNG-\\d+', line.decode())
             if m:
                 issues.add(m.group())
 
