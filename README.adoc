@@ -107,6 +107,7 @@ test model and a simple integration test:
 mvn org.apache.maven.plugins:maven-archetype-plugin:3.1.1:generate -B \
   -DarchetypeGroupId=hu.blackbelt.judo.jsl \
   -DarchetypeArtifactId=judo-jsl-springboot-archetype \
+  -DarchetypeVersion=1.0.3 \
   -DgroupId=com.example \
   -DmodelName=Test
 ----
