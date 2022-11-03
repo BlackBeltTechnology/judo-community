@@ -118,25 +118,25 @@
   url: git@github.com:BlackbeltTechnology/judo-misc-p2.git
   version: 1.0.0
   virtual: false
-- branch: develop
+- branch: master
   github: BlackbeltTechnology/judo-dao-api
-  ignored: false
+  ignored: true
   name: judo-dao-api
   path: judo-dao-api
   property: judo-dao-api-version
   rank: 1
   url: git@github.com:BlackbeltTechnology/judo-dao-api.git
-  version: 1.0.3.20220930_100653_2b31acaa_develop
+  version: 1.0.2
   virtual: false
-- branch: develop
+- branch: master
   github: BlackbeltTechnology/judo-dispatcher-api
-  ignored: false
+  ignored: true
   name: judo-dispatcher-api
   path: judo-dispatcher-api
   property: judo-dispatcher-api-version
   rank: 1
   url: git@github.com:BlackbeltTechnology/judo-dispatcher-api.git
-  version: 1.0.3.20220926_012329_fb44a05f_develop
+  version: 1.0.2
   virtual: false
 - branch: develop
   dependencies:
@@ -326,7 +326,7 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+  branch: master
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
@@ -336,7 +336,7 @@
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-liquibase
-  ignored: false
+  ignored: true
   name: judo-meta-liquibase
   p2:
     localsite: /site/target/repository
@@ -347,14 +347,14 @@
   property: judo-meta-liquibase-version
   rank: 2
   url: git@github.com:BlackbeltTechnology/judo-meta-liquibase.git
-  version: 1.0.2.20221027_013513_8594e071_develop
+  version: 1.0.1
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+  branch: master
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
@@ -364,7 +364,7 @@
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-measure
-  ignored: false
+  ignored: true
   name: judo-meta-measure
   p2:
     localsite: /site/target/repository
@@ -375,7 +375,7 @@
   property: judo-meta-measure-version
   rank: 2
   url: git@github.com:BlackbeltTechnology/judo-meta-measure.git
-  version: 1.0.2.20221027_013343_22169497_develop
+  version: 1.0.1
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
@@ -438,7 +438,7 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+  branch: master
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
@@ -448,7 +448,7 @@
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-rdbms
-  ignored: false
+  ignored: true
   name: judo-meta-rdbms
   p2:
     localsite: /site/target/repository
@@ -460,22 +460,22 @@
   property: judo-meta-rdbms-version
   rank: 2
   url: git@github.com:BlackbeltTechnology/judo-meta-rdbms.git
-  version: 1.0.2.20221027_013544_ec519510_develop
+  version: 1.0.1
   virtual: false
-- branch: develop
+- branch: master
   dependencies:
   - judo-meta-asm
   - judo-dao-api
   - judo-dispatcher-api
   - judo-meta-asm
   github: BlackbeltTechnology/judo-operation-utils
-  ignored: false
+  ignored: true
   name: judo-operation-utils
   path: judo-operation-utils
   property: judo-operation-utils-version
   rank: 3
   url: git@github.com:BlackbeltTechnology/judo-operation-utils.git
-  version: 1.1.2.20221027_020740_f5ce49a7_develop
+  version: 1.1.1
   virtual: false
 - branch: develop
   dependencies:
@@ -520,19 +520,19 @@
   url: git@github.com:BlackbeltTechnology/judo-runtime-core-jsl.git
   version: 1.0.2.20221027_043441_e1670e95_develop
   virtual: false
-- branch: develop
+- branch: master
   dependencies:
   - judo-meta-asm
   - judo-dao-api
   - structured-map-proxy
   github: BlackbeltTechnology/judo-sdk-common
-  ignored: false
+  ignored: true
   name: judo-sdk-common
   path: judo-sdk-common
   property: judo-sdk-common-version
   rank: 3
   url: git@github.com:BlackbeltTechnology/judo-sdk-common.git
-  version: 1.0.3.20221027_020948_13a32b55_develop
+  version: 1.0.2
   virtual: false
 - branch: develop
   dependencies:
