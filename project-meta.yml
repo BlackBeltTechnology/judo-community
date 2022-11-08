@@ -611,7 +611,7 @@
   - judo-tatami-jsl
   - judo-runtime-core
   github: BlackbeltTechnology/judo-jsl-springboot-parent
-  ignored: false
+  ignored: true
   name: judo-jsl-springboot-parent
   path: judo-jsl-springboot-parent
   property: judo-jsl-springboot-parent-version
@@ -621,7 +621,21 @@
   virtual: false
 - branch: develop
   dependencies:
-  - judo-jsl-springboot-parent
+    - judo-tatami-core
+    - judo-tatami-jsl
+    - judo-runtime-core
+  github: BlackbeltTechnology/judo-jsl-springboot-starter
+  ignored: false
+  name: judo-jsl-springboot-starter
+  path: judo-jsl-springboot-starter
+  property: judo-jsl-springboot-starter-version
+  rank: 7
+  url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-starter.git
+  version: 1.0.0.20221108_185153_d71b6b20_develop
+  virtual: false
+- branch: develop
+  dependencies:
+  - judo-jsl-springboot-starter
   github: BlackbeltTechnology/judo-jsl-springboot-archetype
   ignored: false
   name: judo-jsl-springboot-archetype
