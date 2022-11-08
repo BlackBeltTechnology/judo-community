@@ -98,3 +98,7 @@
 	path = judo-jsl-tmbundle
 	url = git@github.com:BlackBeltTechnology/judo-jsl-tmbundle.git
 	branch = develop
+[submodule "judo-psm-archetype"]
+	path = judo-psm-archetype
+	url = git@github.com:BlackBeltTechnology/judo-psm-archetype.git
+	branch = develop

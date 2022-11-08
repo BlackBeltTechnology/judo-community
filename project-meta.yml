@@ -631,3 +631,16 @@
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-archetype.git
   version: 1.0.4.20221027_092644_762bbd01_develop
   virtual: false
+- branch: develop
+  dependencies:
+  - judo-meta-psm
+  - epsilon-runtime
+  github: BlackbeltTechnology/judo-psm-archetype
+  ignored: true
+  name: judo-psm-archetype
+  path: archetypes/judo-psm-archetype
+  property: judo-psm-archetype-version
+  rank: 3
+  url: git@github.com:BlackbeltTechnology/judo-psm-archetype.git
+  version: 1.0.0
+  virtual: false
