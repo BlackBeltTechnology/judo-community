@@ -635,7 +635,7 @@
   virtual: false
 - branch: develop
   dependencies:
-  - judo-jsl-springboot-parent
+  - judo-jsl-springboot-starter
   github: BlackbeltTechnology/judo-jsl-springboot-archetype
   ignored: false
   name: judo-jsl-springboot-archetype
