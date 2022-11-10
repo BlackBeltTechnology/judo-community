@@ -82,6 +82,10 @@
 	path = judo-jsl-springboot-parent
 	url = git@github.com:BlackBeltTechnology/judo-jsl-springboot-parent.git
 	branch = develop
+[submodule "judo-jsl-springboot-starter"]
+	path = judo-jsl-springboot-starter
+	url = git@github.com:BlackBeltTechnology/judo-jsl-springboot-starter.git
+	branch = develop
 [submodule "judo-jsl-springboot-archetype"]
 	path = judo-jsl-springboot-archetype
 	url = git@github.com:BlackBeltTechnology/judo-jsl-springboot-archetype.git
