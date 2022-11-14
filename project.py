@@ -447,9 +447,11 @@ class Module(object):
                     else:
                         return False
         else:
+            tag_found = False 
             for tag in repository.get_tags():
                 _branch = re.sub(r"[\ #,\\\"'/;-]", "_", self.branch)
                 if tag.name and re.match(r'^v.*' + _branch + '.*', tag.name):
+                    tag_found = True
                     ver = tag.name.strip()[1:]  # .encode('ascii', 'ignore')                  
                     if self.version != ver:
                         print(
@@ -463,6 +465,10 @@ class Module(object):
                         return True
                     else:
                         return False
+            if not tag_found:
+                print(f"{Fore.RED}No tag found for branch: {Fore.GREEN}{self.branch}{Fore.YELLOW}: ")
+
+
         return False
 
     def update_dependency_versions_in_pom(self, write_pom=False):
