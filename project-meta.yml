@@ -176,7 +176,7 @@
   property: judo-meta-asm-version
   rank: 2
   url: git@github.com:BlackbeltTechnology/judo-meta-asm.git
-  version: 1.1.3.20221027_013226_c155977f_develop
+  version: 1.1.3.20221102_102348_90786514_develop
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
@@ -206,7 +206,7 @@
   property: judo-meta-expression-version
   rank: 3
   url: git@github.com:BlackbeltTechnology/judo-meta-expression.git
-  version: 1.0.3.20221027_022134_8acd0df6_develop
+  version: 1.0.3.20221109_152148_659d33e5_develop
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
@@ -236,7 +236,7 @@
   property: judo-meta-expression-asm-version
   rank: 4
   url: git@github.com:BlackbeltTechnology/judo-meta-expression-asm.git
-  version: 1.0.3.20221027_030126_b3fe8132_develop
+  version: 1.0.3.20221109_152226_560ffb11_develop
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
@@ -266,7 +266,7 @@
   property: judo-meta-expression-psm-version
   rank: 4
   url: git@github.com:BlackbeltTechnology/judo-meta-expression-psm.git
-  version: 1.0.3.20221027_030048_19de9db4_develop
+  version: 1.0.3.20221109_152227_31d3d691_develop
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
@@ -319,7 +319,7 @@
   property: judo-meta-jsl-version
   rank: 2
   url: git@github.com:BlackbeltTechnology/judo-meta-jsl.git
-  version: 1.0.2.20221027_022855_fa47bd02_develop
+  version: 1.0.2.20221104_115509_fa00ae33_develop
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
@@ -431,7 +431,7 @@
   property: judo-meta-query-version
   rank: 2
   url: git@github.com:BlackbeltTechnology/judo-meta-query.git
-  version: 1.0.2.20221027_014417_ae576326_develop
+  version: 1.0.2.20221114_142342_5450e768_develop
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
@@ -503,7 +503,7 @@
   property: judo-runtime-core-version
   rank: 6
   url: git@github.com:BlackbeltTechnology/judo-runtime-core.git
-  version: 1.1.0.20220505_184754_783f6b83_develop
+  version: 1.0.4.20221114_142254_9dea1ea0_develop
   virtual: false
 - branch: develop
   dependencies:
@@ -518,7 +518,7 @@
   property: judo-runtime-core-jsl-version
   rank: 7
   url: git@github.com:BlackbeltTechnology/judo-runtime-core-jsl.git
-  version: 1.0.2.20221027_043441_e1670e95_develop
+  version: 1.0.2.20221114_142352_d36cad73_develop
   virtual: false
 - branch: master
   dependencies:
@@ -560,7 +560,7 @@
   property: judo-tatami-base-version
   rank: 5
   url: git@github.com:BlackbeltTechnology/judo-tatami-base.git
-  version: 1.1.3.20221027_032853_46b58d19_develop
+  version: 1.1.3.20221109_152302_811ad743_develop
   virtual: false
 - branch: develop
   dependencies:
@@ -576,7 +576,7 @@
   property: judo-tatami-core-version
   rank: 3
   url: git@github.com:BlackbeltTechnology/judo-tatami-core.git
-  version: 1.1.3.20221027_020917_d7259d09_develop
+  version: 1.1.3.20221102_102439_9ffe11ec_develop
   virtual: false
 - branch: develop
   dependencies:
@@ -602,7 +602,7 @@
   property: judo-tatami-jsl-version
   rank: 6
   url: git@github.com:BlackbeltTechnology/judo-tatami-jsl.git
-  version: 1.1.3.20221027_035126_0865e1a1_develop
+  version: 1.1.3.20221109_152337_956b98b7_develop
   virtual: false
 - branch: develop
   dependencies:
@@ -643,5 +643,5 @@
   property: judo-jsl-springboot-archetype-version
   rank: 8
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-archetype.git
-  version: 1.0.4.20221027_092644_762bbd01_develop
+  version: 1.0.4.20221111_140404_716c6e02_develop
   virtual: false
