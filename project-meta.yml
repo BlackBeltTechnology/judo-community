@@ -621,9 +621,9 @@
   virtual: false
 - branch: develop
   dependencies:
-    - judo-tatami-core
-    - judo-tatami-jsl
-    - judo-runtime-core
+  - judo-tatami-core
+  - judo-tatami-jsl
+  - judo-runtime-core
   github: BlackbeltTechnology/judo-jsl-springboot-starter
   ignored: false
   name: judo-jsl-springboot-starter
