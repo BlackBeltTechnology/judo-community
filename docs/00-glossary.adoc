@@ -1,0 +1,17 @@
+= Glossary
+
+This section defines some useful terms, expressions and acronyms because the documentation uses them, so knowing their meaning is important for understanding the documentation.
+
+[options="header", cols="1,2"]
+|===
+|Expression / Acronym | Definition / Description
+
+|Document section
+|TODO
+
+|Requirement
+|TODO
+
+|TODO
+|TODO
+|===
