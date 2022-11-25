@@ -1,4 +1,3 @@
-atlassian~=0.0.0
 atlassian-python-api~=3.28.1
 certifi~=2022.9.24
 chance~=0.110

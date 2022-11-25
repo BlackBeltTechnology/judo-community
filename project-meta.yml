@@ -299,7 +299,7 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+  branch: feature/JNG-4297_Creating_Judo_test_methodology
   dependencies:
   - emf-genmodel-generator
   - judo-genmodel-generator
@@ -503,9 +503,9 @@
   property: judo-runtime-core-version
   rank: 6
   url: git@github.com:BlackbeltTechnology/judo-runtime-core.git
-  version: 1.0.4.20221114_142254_9dea1ea0_develop
+  version: 1.0.4.20221122_121334_1318fd09_develop
   virtual: false
-- branch: develop
+- branch: feature/JNG-4297_Creating_Judo_test_methodology
   dependencies:
   - epsilon-runtime
   - judo-tatami-core
@@ -578,7 +578,7 @@
   url: git@github.com:BlackbeltTechnology/judo-tatami-core.git
   version: 1.1.3.20221102_102439_9ffe11ec_develop
   virtual: false
-- branch: develop
+- branch: feature/JNG-4297_Creating_Judo_test_methodology
   dependencies:
   - judo-meta-jsl
   - judo-meta-rdbms
@@ -643,5 +643,5 @@
   property: judo-jsl-springboot-archetype-version
   rank: 8
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-archetype.git
-  version: 1.0.4.20221111_140404_716c6e02_develop
+  version: 1.0.4.20221117_154831_99a13d0e_develop
   virtual: false
