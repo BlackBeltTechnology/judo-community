@@ -6,12 +6,21 @@ This section defines some useful terms, expressions and acronyms because the doc
 |===
 |Term / Expression / Acronym | Definition / Description
 
-|Document section
+|*Document section*
 |TODO
 
-|Requirement
+|*Requirement*
 |TODO
 
+|*judo-reqprefix*
 |TODO
+
+|*judo-req*
+a|See link:#judo-requirement[judo-requirement]
+
+a|[#judo-requirement]*judo-requirement*
+|TODO
+
+|*Metadata of document*
 |TODO
 |===
