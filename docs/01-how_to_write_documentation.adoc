@@ -6,12 +6,12 @@ Here is defined and described what you have to do when you add a new feature to 
 
 === Adding new adoc file
 
-If you add a new functional definition document (*.adoc), you need to add a _reqprefix_ document attribute to the adoc file. It is a short character string, which will be used in the unique identifier generation, therefore it must be unique in the JUDO project.
+If you add a new functional definition document (*.adoc), you need to add a _judo-reqprefix_ document attribute (metadata) to the adoc file. It is a short character string, which will be used in the unique identifier generation, therefore it must be unique in the JUDO project.
 
-.Using "reqprefix" attribute
+.Using "judo-reqprefix" attribute
 [source,adoc]
 ----
-:reqprefix: REQ-FNC
+:judo-reqprefix: REQ-FNC
 
 = Title of document
 
@@ -24,24 +24,24 @@ TODO
 [#newsection]
 === Adding new section into an adoc document
 
-If you create a new section in an existing or new functional requirement document, that is defines a requirement or a behaviour, you need to add an extra _requirement_ or _req_ attribute to the header of the sections.
+If you create a new section in an existing or new functional requirement document, that is defines a requirement or a behaviour, you need to add an extra _judo-requirement_ or _judo-req_ boolean type attribute to the header of the sections.
 
 [source,adoc]
 ----
-[requirment]
+[judo-req="true"]
 == Func1
 
 ...
 
-[req]
+[judo-req="true"]
 == Func2
 
-[requirement]
+[judo-requirement="true"]
 === Req1 of Func2
 
 ...
 
-[req]
+[judo-req="true"]
 === Req2 of Func2
 
 ...
