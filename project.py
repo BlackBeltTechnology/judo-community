@@ -25,7 +25,7 @@ To install make sure you are in the base JUDO project directory.
        pyenv virtualenv 3.7.3 judo-ng
        pyenv local judo-ng
 
-   After installation it is activated, nothing to do.
+   After installation, it is activated, nothing to do.
 
 1b. Install without pyenv
 
@@ -87,14 +87,14 @@ This information then can be used to update pom.xml files to use the latest vers
 
    ./project.py -sm judo-meta-psm -tm judo-platform -nf feature/JNG-3834_TestCI "JNG-3834 Test CI capability"
 
-   It creates feature branch, create an empty commit and create draft pull request for all projects between judo-meta-psm
-   and judo-platform
+   It creates feature branch, create an empty commit and create draft pull request for all projects between
+   judo-meta-psm and judo-platform
 
-== Perform continuos build
+== Perform continues build
 
    ./project.py -sm judo-meta-psm judo-meta-jql judo-meta-expression -tm judo-platform -bs
 
-   It fetches versions for the given modules, updating pom.xml's, pushing and waiting for new versions. It will
+   It fetches versions for the given modules, updating pom.xml, pushing and waiting for new versions. It will
    traverse graph and orchestrating that all descendants have correct and consistent version.
 
 == Switch branch
@@ -149,7 +149,7 @@ For example clone again:
 
     git clone --recurse-submodules git@github.com:BlackBeltTechnology/judo-ng.git ~/rel-judo-ng
 
-Make sure everything locally is up to date:
+Make sure everything locally is up-to-date:
 
     git submodule init
     git submodule update --recursive
@@ -179,18 +179,16 @@ import re
 import socket
 import webbrowser
 from argparse import RawDescriptionHelpFormatter, ArgumentParser
-from typing import Dict, Any
+from typing import Any, Dict
 
 import git
 from github import Github, UnknownObjectException
 import yaml
 from xml.etree.ElementTree import Comment, register_namespace, parse, XMLParser, TreeBuilder
-from subprocess import call, check_output
+from subprocess import call
 
 import time
-import shutil
 from git import RemoteProgress
-from packaging import version
 
 import networkx as nx
 from networkx.drawing.nx_pydot import write_dot, to_pydot
@@ -199,7 +197,6 @@ from networkx.algorithms.dag import ancestors, descendants
 
 from asciidag.graph import Graph as AsciiGraph
 from asciidag.node import Node as AsciiNode
-from progressbar import progressbar, ProgressBar
 from tqdm import tqdm
 
 import argparse
@@ -273,8 +270,10 @@ github_arg_group.add_argument("-nf", "--newfeature", action="store", dest="new_f
                               metavar='branch message', nargs='+',
                               help='Create feature branch and pull request. (same as -cbr and -cpr). '
                                    'If branch name contains spaces, it will be replaced with underscores ("_"). '
-                                   'If message is left empty, original, passed branch parameter will be used as PR title. '
-                                   'If message/or branch name start with for example feature/ then it will be removed for the PR\'s title and body.')
+                                   'If message is left empty, original, passed branch parameter will be used as '
+                                   'PR title. '
+                                   'If message/or branch name start with for example feature/ then it will be removed '
+                                   'for the PR\'s title and body.')
 github_arg_group.add_argument("-ub", "--updatebranch", action="store_true", dest="update_branch",
                               default=False,
                               help='Update checked out branches in project-meta.yml')
@@ -326,8 +325,8 @@ class StoppableHTTPServer(http.server.HTTPServer):
             self.server_close()
 
 
-process_info_server: StoppableHTTPServer = None
-process_info_server_pid = None
+process_info_server: StoppableHTTPServer
+process_info_server_pid: threading.Thread
 
 register_namespace('', 'http://maven.apache.org/POM/4.0.0')
 pom_namespace = "{http://maven.apache.org/POM/4.0.0}"
@@ -430,16 +429,16 @@ class Module(object):
             return
         # repository = github.get_organization(par['github'].split("/")[0]).get_repo(par['github'].split("/")[1])
         repository = github.get_repo(self.github)
-        for tag in repository.get_tags():
+        for _tag in repository.get_tags():
             if self.branch == 'master':
-                if tag.name and re.match(r'^v(\d+\.)?(\d+\.)?(\*|\d+)$', tag.name):
+                if _tag.name and re.match(r'^v(\d+\.)?(\d+\.)?(\*|\d+)$', _tag.name):
                     ver = tag.name.strip()[1:]  # .encode('ascii', 'ignore')
                 else:
                     return False
             else:
-                _branch = re.sub(r"[\ #,\\\"'/;-]", "_", self.branch)
-                if tag.name and re.match(r'^v.*' + _branch + '.*', tag.name):
-                    ver = tag.name.strip()[1:]  # .encode('ascii', 'ignore')
+                _branch = re.sub(r"[ #,\\\"'/;-]", "_", self.branch)
+                if _tag.name and re.match(r'^v.*' + _branch + '.*', _tag.name):
+                    ver = _tag.name.strip()[1:]  # .encode('ascii', 'ignore')
                 else:
                     return False
 
@@ -449,7 +448,8 @@ class Module(object):
                     f"{Fore.GREEN}{self.version} {Fore.YELLOW}=>{Fore.GREEN} {ver}")
                 # if version.parse(ver) < version.parse(self.version):
                 #     raise SystemExit(
-                #         f"{Fore.RED}{version.parse(ver)} in properties smaller than {version.parse(self.version)} on project-meta.yml: "
+                #         f"{Fore.RED}{version.parse(ver)} in properties smaller than {version.parse(self.version)} on
+                #         project-meta.yml: "
                 #         f"{self.name}")
                 self.version = ver
                 return True
@@ -460,17 +460,17 @@ class Module(object):
     def update_git_tag_versions(self):
         if self.ignored:
             return
-        tags = reversed(sorted(self.get_remote_tags().keys()))
-        for tag in tags:
+        _tags = reversed(sorted(self.get_remote_tags().keys()))
+        for _tag in _tags:
             if self.branch == 'master':
-                if tag and re.match(r'^v(\d+\.)?(\d+\.)?(\*|\d+)$', tag):
-                    ver = tag.strip()[1:]  # .encode('ascii', 'ignore')
+                if _tag and re.match(r'^v(\d+\.)?(\d+\.)?(\*|\d+)$', _tag):
+                    ver = _tag.strip()[1:]  # .encode('ascii', 'ignore')
                 else:
                     return False
             else:
-                _branch = re.sub(r"[\ #,\\\"'/;-]", "_", self.branch)
-                if tag and re.match(r'^v.*' + _branch + '.*', tag):
-                    ver = tag.strip()[1:]  # .encode('ascii', 'ignore')
+                _branch = re.sub(r"[ #,\\\"'/;-]", "_", self.branch)
+                if _tag and re.match(r'^v.*' + _branch + '.*', _tag):
+                    ver = _tag.strip()[1:]  # .encode('ascii', 'ignore')
                 else:
                     return False
 
@@ -480,7 +480,8 @@ class Module(object):
                     f"{Fore.GREEN}{self.version} {Fore.YELLOW}=>{Fore.GREEN} {ver}")
                 # if version.parse(ver) < version.parse(self.version):
                 #     raise SystemExit(
-                #         f"{Fore.RED}{version.parse(ver)} in properties smaller than {version.parse(self.version)} on project-meta.yml: "
+                #         f"{Fore.RED}{version.parse(ver)} in properties smaller than {version.parse(self.version)} on
+                #         project-meta.yml: "
                 #         f"{self.name}")
                 self.version = ver
                 return True
@@ -513,7 +514,8 @@ class Module(object):
                                  f"{self.name}")
             if ref_prop_element.text != dependency.version:
                 # if version.parse(dependency.version) < version.parse(ref_prop_element.text):
-                #     raise SystemExit(f"{Fore.RED}{version.parse(dependency.version)} in properties smaller than {version.parse(ref_prop_element.text)} on pom.xml: "
+                #     raise SystemExit(f"{Fore.RED}{version.parse(dependency.version)} in properties smaller than
+                #     {version.parse(ref_prop_element.text)} on pom.xml: "
                 #                      f"{self.name}")
                 ref_prop_element.text = dependency.version
                 update = True
@@ -576,7 +578,7 @@ class Module(object):
         # You need to check out the branch after creating it if you want to use it
         _repo.git.checkout(self.branch)
         _repo.git.reset()
-        #_repo.git.merge( self.branch, no_ff = True, no_commit = True)
+        # repo.git.merge( self.branch, no_ff = True, no_commit = True)
         _repo.remotes.origin.pull()
 
     def checkout_tags(self):
@@ -596,8 +598,8 @@ class Module(object):
 
     def check_dirty(self):
         _currentDir = os.getcwd() + '/' + self.path
-        repo = git.Repo(os.getcwd() + '/' + self.path)
-        return repo.is_dirty(untracked_files=True)
+        _repo = git.Repo(os.getcwd() + '/' + self.path)
+        return _repo.is_dirty(untracked_files=True)
 
     def commit_and_push_changes(self):
         _repo = self.repo()
@@ -638,7 +640,8 @@ class Module(object):
 
         if " " in _branch_name:
             print(
-                f"{Fore.YELLOW}Sanitizing branch name: {Fore.GREEN}{_branch_name} {Fore.YELLOW}=> {Fore.GREEN}{_branch_name.replace(' ', '_')}")
+                f"{Fore.YELLOW}Sanitizing branch name: {Fore.GREEN}{_branch_name} {Fore.YELLOW}=> {Fore.GREEN}"
+                f"{_branch_name.replace(' ', '_')}")
             _branch_name = _branch_name.replace(" ", "_")
 
         found = False
@@ -690,7 +693,8 @@ class Module(object):
 
         try:
             print(
-                f"{Fore.YELLOW}Creating pull request in {Fore.GREEN}{self.name} {Fore.YELLOW}on branch {Fore.GREEN}{self.branch}")
+                f"{Fore.YELLOW}Creating pull request in {Fore.GREEN}{self.name} {Fore.YELLOW}on branch {Fore.GREEN}"
+                f"{self.branch}")
             _repo.create_pull(
                 title=_message,
                 body=_message,
@@ -713,18 +717,18 @@ def process_module(par, _modules, _module_by_name):
             process_module(_item, _modules, _module_by_name)
 
 
-def load_modules(filename="project-meta.yml", str=""):
-    if filename:
-        with open(filename, 'r') as stream:
+def load_modules(_filename="project-meta.yml", _str=""):
+    if _filename:
+        with open(_filename, 'r') as stream:
             try:
                 _results = yaml.load(stream, Loader=yaml.FullLoader)
                 return _results
             except yaml.YAMLError as exc:
                 print(exc)
                 raise exc
-    elif str:
+    elif _str:
         try:
-            _results = yaml.load(str, Loader=yaml.FullLoader)
+            _results = yaml.load(_str, Loader=yaml.FullLoader)
             return _results
         except yaml.YAMLError as exc:
             print(exc)
@@ -821,7 +825,6 @@ def save_modules(_modules, _module_by_name):
 
 
 def check_module_depenencies(_modules, _module_by_name):
-    current_pom_version
     _errors = []
     _pending_changes = False
     for _module in _modules:
@@ -829,15 +832,20 @@ def check_module_depenencies(_modules, _module_by_name):
             for _module_to_check in _modules:
                 version_in_pom = current_pom_version(_module, _module_to_check)
                 if version_in_pom:
-                    if not _module_to_check in _module.dependencies:
-                        print(f"{Fore.GREEN}{_module.name}{Fore.YELLOW} - doesn't contain {Fore.GREEN}{_module_to_check.name}{Fore.YELLOW} in dependencies, but {Fore.GREEN}{_module.path}/pom.xml{Fore.YELLOW} have {Fore.GREEN}{_module_to_check.property}")
+                    if _module_to_check not in _module.dependencies:
+                        print(f"{Fore.GREEN}{_module.name}{Fore.YELLOW} - doesn't contain "
+                              f"{Fore.GREEN}{_module_to_check.name}{Fore.YELLOW} in dependencies, but "
+                              f"{Fore.GREEN}{_module.path}/pom.xml{Fore.YELLOW} have "
+                              f"{Fore.GREEN}{_module_to_check.property}")
                         _module.dependencies.append(_module_to_check)
                         _pending_changes = True
                 else:
                     if _module_to_check in _module.dependencies:
-                        _errors.append(f"{Fore.RED}{_module.name} - Property definition {Fore.GREEN}{_module_to_check.property}{Fore.RED} is missing in {Fore.GREEN}{_module.path}/pom.xml")
+                        _errors.append(f"{Fore.RED}{_module.name} - Property definition "
+                                       f"{Fore.GREEN}{_module_to_check.property}{Fore.RED} is missing in "
+                                       f"{Fore.GREEN}{_module.path}/pom.xml")
 
-    if len(_errors)> 0:
+    if len(_errors) > 0:
         for _error in _errors:
             print(f"{_error}\n")
         raise SystemExit(f"\n{Fore.RED}Errors found in module dependencies.")
@@ -945,8 +953,9 @@ def start_process_info_server(_modules, _process_info):
     return httpd
 
 
-def check_modules_for_update(_modules, _module_by_name, _processing_modules=set()):
-    # Check implications on modules
+def update_modules_versions(_modules, _module_by_name, _processing_modules=None, _release_build=False):
+    if _processing_modules is None:
+        _processing_modules = set()
     _updated_modules = set()
     for _module in _modules:
         if not _module.ignored and not _module.virtual:
@@ -1157,6 +1166,9 @@ def calculate_processable_modules(_modules, _process_info, _module_by_name):
     if len(_start_modules) > 0:
         _modules_to_build = set(_start_modules)
         _start_modules_ancestors = set()
+        _terminate_ancestors = set()
+        _terminate_descendants = set()
+
         for _module in _start_modules:
             _start_modules_ancestors = _start_modules_ancestors.union(set(ancestors(calculate_graph(_available_modules),
                                                                                     _module)))
@@ -1231,7 +1243,7 @@ def build_snapshot(_modules, _process_info, _module_by_name):
             with open(os.path.abspath(os.getcwd() + "/" + _module.path + "/" + _module.p2['releaselocations'])) as f:
                 _releaseLocs = {k: v for _line in filter(str.rstrip, f) for (k, v) in [_line.strip().split(None, 1)]}
 
-            _locations: dict[Any, str] = dict(_releaseLocs)
+            _locations: Dict[Any, str] = dict(_releaseLocs)
             for _dependency_module in _module.dependencies:
                 _locations_key = _dependency_module.name + "-location"
                 _version = current_pom_version(_module, _dependency_module)
@@ -1275,12 +1287,12 @@ def build_snapshot(_modules, _process_info, _module_by_name):
         _process_info[_module] = {"status": "OK"}
 
 
-def build_continuous(_modules, _process_info, _module_by_name):
+def build_continuous(_modules, _process_info, _module_by_name, _release_build=False):
     print(f"\n{Fore.YELLOW}Continuous build for modules :\n" + (
         f"\n".join(map(lambda _m: f"- {Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}",
                        _modules))) + f"{Style.RESET_ALL}\n")
 
-    _modules_to_process = check_modules_for_update(_modules, _module_by_name)
+    _modules_to_process = update_modules_versions(_modules, _module_by_name, _release_build)
     for _module in _modules:
         _process_info[module] = {"status": "WAITING"}
 
@@ -1301,7 +1313,9 @@ def build_continuous(_modules, _process_info, _module_by_name):
 
         if len(_removable_modules) > 0:
             _modules_to_process = _modules_to_process.difference(_removable_modules)
-            _new_modules_to_process = check_modules_for_update(_modules, _module_by_name, _processing_modules=_modules_to_process)
+            _new_modules_to_process = update_modules_versions(_modules, _module_by_name,
+                                                              _processing_modules=_modules_to_process,
+                                                              _release_build=_release_build)
             for _new_module in _new_modules_to_process.union(_modules_to_process):
                 _removable_modules = _removable_modules.union(set(
                     ancestors(calculate_graph(_modules), _new_module)))
@@ -1355,76 +1369,79 @@ for module in modules:
 
 calculate_ranks(modules)
 
-_processable_modules = calculate_processable_modules(modules, process_info, module_by_name)
+processable_modules = calculate_processable_modules(modules, process_info, module_by_name)
 
-print_dependency_graph_ascii(_processable_modules)
+print_dependency_graph_ascii(processable_modules)
 
 check_module_depenencies(modules, module_by_name)
 
 # =============================== Fetch / Checkout / Reset Git
 if args.git_checkout:
-    _currentDir = os.getcwd()
-    _repo = git.Repo(_currentDir)
-    # for _submodule in _repo.submodules:
+    currentDir = os.getcwd()
+    repo = git.Repo(currentDir)
+    # for _submodule in repo.submodules:
     #    print(f"{Fore.YELLOW}Update submodule {Fore.GREEN}{_submodule.name}{Style.RESET_ALL}")
     #    _submodule.update(init=True)
-    _modules = tqdm(_processable_modules)
-    for _module in _modules:
-        if not _module.virtual:
-            _submodule_repo = _module.repo()
-            _modules.set_description(_module.name)
-            print(f"{Fore.YELLOW}Checkout submodule {Fore.GREEN}{_module.branch} {Fore.YELLOW}in {Fore.GREEN}{_submodule_repo.git_dir}")
-            if _module.check_dirty():
+    modules = tqdm(processable_modules)
+    for module in modules:
+        if not module.virtual:
+            submodule_repo = module.repo()
+            modules.set_description(module.name)
+            print(f"{Fore.YELLOW}Checkout submodule {Fore.GREEN}{module.branch} {Fore.YELLOW} in "
+                  f"{Fore.GREEN}{submodule_repo.git_dir}")
+            if module.check_dirty():
                 print(f"{Fore.YELLOW} - Submodule is in dirty state, stashing")
-                _module.repo().git.stash(["-u", "-m \"[AUTO STASH]\""])
+                module.repo().git.stash(["-u", "-m \"[AUTO STASH]\""])
 
             # print(f"{Fore.YELLOW}Update submodule {Fore.GREEN}{_module.name}{Style.RESET_ALL}")
-            _repo.submodule(_module.path).update(init=True)
-            # print(f"{Fore.YELLOW}Set branch {Fore.GREEN}{_module.branch}{Fore.YELLOW} for {Fore.GREEN}{_module.name}{Style.RESET_ALL}")
-            _module.checkout_branch()
+            repo.submodule(module.path).update(init=True)
+            # print(f"{Fore.YELLOW}Set branch {Fore.GREEN}{_module.branch}{Fore.YELLOW} for {Fore.GREEN}{_module.name}
+            # {Style.RESET_ALL}")
+            module.checkout_branch()
 
 if args.fetch_versions:
-    fetch_versions(_processable_modules)
+    fetch_versions(processable_modules)
 
 if args.integration_build:
-    fetch_versions(_processable_modules)
+    fetch_versions(processable_modules)
 
 if args.new_feature:
-    for _module in _processable_modules:
-        if not _module.virtual and not _module.ignored:
+    for module in processable_modules:
+        if not module.virtual and not module.ignored:
             new_feature_parameters = args.new_feature
             if len(new_feature_parameters) > 2:
-                print(f"{Fore.RED} WARNING! {Fore.YELLOW}new feature parameters are ignored from the 3rd one and onwards.")
+                print(f"{Fore.RED} WARNING! "
+                      f"{Fore.YELLOW}new feature parameters are ignored from the 3rd one and onwards.")
 
-            _module.create_branch(new_feature_parameters[0])
+            module.create_branch(new_feature_parameters[0])
 
             if len(new_feature_parameters) > 1 and new_feature_parameters[1]:
-                _module.create_pull_request(args.new_feature[1])
+                module.create_pull_request(args.new_feature[1])
             else:
-                _module.create_pull_request(new_feature_parameters[0])
+                module.create_pull_request(new_feature_parameters[0])
 
 if args.update_branch:
-    for _module in _processable_modules:
-        if not _module.virtual and not _module.ignored:
-            _module.update_branch_from_git()
+    for module in processable_modules:
+        if not module.virtual and not module.ignored:
+            module.update_branch_from_git()
 
 if args.create_branch and not args.new_feature:
-    for _module in _processable_modules:
-        if not _module.virtual and not _module.ignored:
-            _module.create_branch(args.create_branch[0])
+    for module in processable_modules:
+        if not module.virtual and not module.ignored:
+            module.create_branch(args.create_branch[0])
 
 if args.switch_branch and not args.new_feature:
-    for _module in _processable_modules:
-        if not _module.virtual and not _module.ignored:
-            _module.switch_branch(args.switch_branch[0])
+    for module in processable_modules:
+        if not module.virtual and not module.ignored:
+            module.switch_branch(args.switch_branch[0])
 
 if args.create_pr and not args.new_feature:
-    for _module in _processable_modules:
-        if not _module.virtual and not _module.ignored:
-            _module.create_pull_request(args.create_pr[0])
+    for module in processable_modules:
+        if not module.virtual and not module.ignored:
+            module.create_pull_request(args.create_pr[0])
 
 if args.update_module_pom:
-    for module in _processable_modules:
+    for module in processable_modules:
         if module.name == args.update_module_pom[0]:
             module.update_dependency_versions_in_pom(True)
             if not module.call_postchangescripts():
@@ -1441,8 +1458,8 @@ if not args.dirty:
 if args.build_snapshot:
     # =============================== Start process info server
     atexit.register(server_shutdown)
-    server_start(_processable_modules, process_info)
-    build_snapshot(_processable_modules, process_info, module_by_name)
+    server_start(processable_modules, process_info)
+    build_snapshot(processable_modules, process_info, module_by_name)
 
 # =============================== Generating Graphviz
 if args.graphviz:
@@ -1450,7 +1467,7 @@ if args.graphviz:
 
 # =============================== Force postchange run
 if args.run_postchangescripts:
-    for module in _processable_modules:
+    for module in processable_modules:
         if not module.ignored and not module.virtual:
             if not module.call_postchangescripts():
                 print(f"\n{Fore.RED}Error when calling post change script on {module.name}.")
@@ -1462,15 +1479,15 @@ if args.run_postchangescripts:
 
 # ================================ Checking for updates
 if args.continuous_update or args.integration_build:
-    server_start(_processable_modules, process_info)
-    build_continuous(_processable_modules, process_info, module_by_name)
+    server_start(processable_modules, process_info)
+    build_continuous(processable_modules, process_info, module_by_name)
 
 if args.relnotes:
-    _currentDir = os.getcwd()
+    currentDir = os.getcwd()
     _rootRepo = git.Repo(os.getcwd())
     hashes = args.relnotes[0].split("..")
     if len(hashes) == 2:
-        current_modules_loaded = load_modules(filename='', str=_rootRepo.git.show(hashes[1] + ":project-meta.yml"))
+        current_modules_loaded = load_modules(_filename='', _str=_rootRepo.git.show(hashes[1] + ":project-meta.yml"))
     else:
         current_modules_loaded = load_modules()
 
@@ -1480,7 +1497,7 @@ if args.relnotes:
     for item in current_modules_loaded:
         process_module(item, current_modules, current_modules_by_name)
 
-    previous_modules_loaded = load_modules(filename='', str=_rootRepo.git.show(hashes[0] + ":project-meta.yml"))
+    previous_modules_loaded = load_modules(_filename='', _str=_rootRepo.git.show(hashes[0] + ":project-meta.yml"))
 
     previous_modules_by_name = {}
     previous_modules = []
@@ -1501,7 +1518,7 @@ if args.relnotes:
 
     for module in current_modules:
         if module.name in module_versions and not module.ignored:
-            if (module.version != module_versions[module.name][1]):
+            if module.version != module_versions[module.name][1]:
 
                 print(f"Getting logs for {module.name}")
 
@@ -1543,7 +1560,7 @@ if args.relnotes:
                             issues.add(m.group())
 
     for module in new_modules:
-        for line in module.repo().git.log('--pretty=oneline'.format(from_sha, to_sha).split()).splitlines():
+        for line in module.repo().git.log('--pretty=oneline'.split()).splitlines():
             m = re.search('JNG-\\d+', line)
             if m:
                 issues.add(m.group())
@@ -1572,35 +1589,71 @@ if args.relnotes:
     output += "-----------------\n"
     output += "\n"
     output += f"Version: {module_by_name['judo-epp-designer'].version}\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/{module_by_name['judo-epp-designer'].version}/judo-designer_{module_by_name['judo-epp-designer'].version}-macosx.cocoa.x86_64.tar.gz[MacOS Intel] |\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/{module_by_name['judo-epp-designer'].version}/judo-designer_{module_by_name['judo-epp-designer'].version}-macosx.cocoa.aarch64.tar.gz[MacOS Apple Silicon] |\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/{module_by_name['judo-epp-designer'].version}/judo-designer_{module_by_name['judo-epp-designer'].version}-linux.gtk.x86_64.tar.gz[Linux x86_64] |\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/{module_by_name['judo-epp-designer'].version}/judo-designer_{module_by_name['judo-epp-designer'].version}-linux.gtk.aarch64.tar.gz[Linux Arm64] |\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/{module_by_name['judo-epp-designer'].version}/judo-designer_{module_by_name['judo-epp-designer'].version}-linux.gtk.x86_64_all.deb[Linux Debian/Ubuntu x86_64] |\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/{module_by_name['judo-epp-designer'].version}/judo-designer_{module_by_name['judo-epp-designer'].version}-linux.gtk.aarch64_all.deb[Linux Debian/Ubuntu Arm64] |\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/{module_by_name['judo-epp-designer'].version}/judo-designer_{module_by_name['judo-epp-designer'].version}-win32.win32.x86_64.zip[Windows ZIP] |\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/{module_by_name['judo-epp-designer'].version}/judo-designer_{module_by_name['judo-epp-designer'].version}-win32.win32.x86_64.exe[Windows Installer] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/" \
+              f"{module_by_name['judo-epp-designer'].version}/judo-designer_" \
+              f"{module_by_name['judo-epp-designer'].version}-macosx.cocoa.x86_64.tar.gz[MacOS Intel] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/" \
+              f"{module_by_name['judo-epp-designer'].version}/judo-designer_" \
+              f"{module_by_name['judo-epp-designer'].version}-macosx.cocoa.aarch64.tar.gz[MacOS Apple Silicon] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/" \
+              f"{module_by_name['judo-epp-designer'].version}/judo-designer_" \
+              f"{module_by_name['judo-epp-designer'].version}-linux.gtk.x86_64.tar.gz[Linux x86_64] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/" \
+              f"{module_by_name['judo-epp-designer'].version}/judo-designer_" \
+              f"{module_by_name['judo-epp-designer'].version}-linux.gtk.aarch64.tar.gz[Linux Arm64] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/" \
+              f"{module_by_name['judo-epp-designer'].version}/judo-designer_" \
+              f"{module_by_name['judo-epp-designer'].version}-linux.gtk.x86_64_all.deb[Linux Debian/Ubuntu x86_64] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/" \
+              f"{module_by_name['judo-epp-designer'].version}/judo-designer_" \
+              f"{module_by_name['judo-epp-designer'].version}-linux.gtk.aarch64_all.deb[Linux Debian/Ubuntu Arm64] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/" \
+              f"{module_by_name['judo-epp-designer'].version}/judo-designer_" \
+              f"{module_by_name['judo-epp-designer'].version}-win32.win32.x86_64.zip[Windows ZIP] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-designer/" \
+              f"{module_by_name['judo-epp-designer'].version}/judo-designer_" \
+              f"{module_by_name['judo-epp-designer'].version}-win32.win32.x86_64.exe[Windows Installer] |\n"
     output += "\n"
     output += "Download Architect\n"
     output += "------------------\n"
     output += "\n"
     output += f"Version: {module_by_name['judo-epp-architect'].version}\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/{module_by_name['judo-epp-architect'].version}/judo-architect_{module_by_name['judo-epp-architect'].version}-macosx.cocoa.x86_64.tar.gz[MacOS Intel] |\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/{module_by_name['judo-epp-architect'].version}/judo-architect_{module_by_name['judo-epp-architect'].version}-macosx.cocoa.aarch64.tar.gz[MacOS Apple Silicon] |\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/{module_by_name['judo-epp-architect'].version}/judo-architect_{module_by_name['judo-epp-architect'].version}-linux.gtk.x86_64.tar.gz[Linux x86_64] |\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/{module_by_name['judo-epp-architect'].version}/judo-architect_{module_by_name['judo-epp-architect'].version}-linux.gtk.aarch64.tar.gz[Linux Arm64] |\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/{module_by_name['judo-epp-architect'].version}/judo-architect_{module_by_name['judo-epp-architect'].version}-linux.gtk.x86_64_all.deb[Linux Debian/Ubuntu x86_64] |\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/{module_by_name['judo-epp-architect'].version}/judo-architect_{module_by_name['judo-epp-architect'].version}-linux.gtk.aarch64_all.deb[Linux Debian/Ubuntu Arm64] |\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/{module_by_name['judo-epp-architect'].version}/judo-architect_{module_by_name['judo-epp-architect'].version}-win32.win32.x86_64.zip[Windows ZIP] |\n"
-    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/{module_by_name['judo-epp-architect'].version}/judo-architect_{module_by_name['judo-epp-architect'].version}-win32.win32.x86_64.exe[Windows Installer] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/" \
+              f"{module_by_name['judo-epp-architect'].version}/judo-architect_" \
+              f"{module_by_name['judo-epp-architect'].version}-macosx.cocoa.x86_64.tar.gz[MacOS Intel] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/" \
+              f"{module_by_name['judo-epp-architect'].version}/judo-architect_" \
+              f"{module_by_name['judo-epp-architect'].version}-macosx.cocoa.aarch64.tar.gz[MacOS Apple Silicon] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/" \
+              f"{module_by_name['judo-epp-architect'].version}/judo-architect_" \
+              f"{module_by_name['judo-epp-architect'].version}-linux.gtk.x86_64.tar.gz[Linux x86_64] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/" \
+              f"{module_by_name['judo-epp-architect'].version}/judo-architect_" \
+              f"{module_by_name['judo-epp-architect'].version}-linux.gtk.aarch64.tar.gz[Linux Arm64] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/" \
+              f"{module_by_name['judo-epp-architect'].version}/judo-architect_" \
+              f"{module_by_name['judo-epp-architect'].version}-linux.gtk.x86_64_all.deb[Linux Debian/Ubuntu x86_64] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/" \
+              f"{module_by_name['judo-epp-architect'].version}/judo-architect_" \
+              f"{module_by_name['judo-epp-architect'].version}-linux.gtk.aarch64_all.deb[Linux Debian/Ubuntu Arm64] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/" \
+              f"{module_by_name['judo-epp-architect'].version}/judo-architect_" \
+              f"{module_by_name['judo-epp-architect'].version}-win32.win32.x86_64.zip[Windows ZIP] |\n"
+    output += f"https://nexus.judo.technology/repository/p2/judo-epp-architect/" \
+              f"{module_by_name['judo-epp-architect'].version}/judo-architect_" \
+              f"{module_by_name['judo-epp-architect'].version}-win32.win32.x86_64.exe[Windows Installer] |\n"
     output += "\n"
     output += "JUDO Eclipse development plugin site\n"
     output += "------------------------------------\n"
     output += f"Version: {module_by_name['judo-eclipse-development'].version}\n"
     output += "\n"
-    output += "The JUDO Architect does not contain any JUDO meta models or JQL / JCL plugins. This update site contains all required artifacts which are used to build Eclipse Designer.\n"
-    output += f"To install plugins open `Install new Software` window and in update site add `https://nexus.judo.technology/repository/p2/judo-eclipse-development/{module_by_name['judo-eclipse-development'].version}`/ \n"
-    output += "To update a previously installed version, set the update site URL to the desired one and update the plugin.\n"
+    output += "The JUDO Architect does not contain any JUDO meta models or JQL / JCL plugins. This update site " \
+              "contains all required artifacts which are used to build Eclipse Designer.\n"
+    output += f"To install plugins open `Install new Software` window and in update site " \
+              f"add `https://nexus.judo.technology/repository/p2/judo-eclipse-development/" \
+              f"{module_by_name['judo-eclipse-development'].version}`/ \n"
+    output += "To update a previously installed version, set the update site URL to the desired one and update the " \
+              "plugin.\n"
     output += "\n"
     output += "JUDO Modules\n"
     output += "------------\n"
@@ -1608,7 +1661,8 @@ if args.relnotes:
     output += "|=======================\n"
     output += "| Name | GitHUB | Version\n"
     for module in modules:
-        output += f"| {module.name} | https://github.com/{module.github}[{module.github}] | https://github.com/{module.github}/releases/tag/v{module.version}[{module.version}^]\n"
+        output += f"| {module.name} | https://github.com/{module.github}[{module.github}] | https://github.com/" \
+                  f"{module.github}/releases/tag/v{module.version}[{module.version}^]\n"
     output += f"|=======================\n"
 
     output += "Changelog\n"
@@ -1636,7 +1690,8 @@ if args.relnotes:
             issuetype = issue['fields']['issuetype']['name']
             summary = issue['fields']['summary']
             status = issue['fields']['status']['name']
-            output += f"| https://blackbelt.atlassian.net/browse/{issueNumber}[{issueNumber}^] | {issuetype} | {summary} | {status} | {note}\n"
+            output += f"| https://blackbelt.atlassian.net/browse/{issueNumber}[{issueNumber}^] | {issuetype} | " \
+                      f"{summary} | {status} | {note}\n"
         except BaseException as err:
             print(f"An exception occurred on fetching {issueNumber} - {err=}, {type(err)=}")
     output += "|=======================\n"
