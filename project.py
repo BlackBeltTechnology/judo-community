@@ -6,7 +6,7 @@ To install make sure you are in the base JUDO project directory.
 
 1a. Install with pyenv. 
 
-    
+
    Install pyenv in Linux (https://github.com/pyenv/pyenv-installer)
 
        curl https://pyenv.run | bash
@@ -16,15 +16,15 @@ To install make sure you are in the base JUDO project directory.
 
        brew update
        brew install pyenv
-       
+
    Install on Windows: https://github.com/pyenv-win/pyenv-win#installation
 
 
    Add virtual environment:
- 
+
        pyenv virtualenv 3.7.3 judo-ng
        pyenv local judo-ng
-       
+
    After installation it is activated, nothing to do.
 
 1b. Install without pyenv
@@ -42,7 +42,7 @@ To install make sure you are in the base JUDO project directory.
       python3 -m venv .pyenv
 
    Later, when interacting with the script, make sure you activated the environment with:
-    
+
       source .pyenv/bin/activate
 
 
@@ -52,14 +52,14 @@ To install make sure you are in the base JUDO project directory.
       pip install -r requirements.txt
 
 
-Those features that use the remote repository need a GitHub token for authentication, 
+Those features that use the remote repository need a GitHub token for authentication,
 visit https://github.com/settings/tokens to create one. Scope to select: repo - Full control of private repositories.
 
 If there is any problem with dependencies, try:
 
       pip install -r requirements.txt --upgrade --force-reinstall
 
-A very important output of the script is the project-meta.yml file. 
+A very important output of the script is the project-meta.yml file.
 This contains the relations between the modules and is used to update pom.xml files etc.
 Try it:
 
@@ -266,7 +266,7 @@ git_arg_group.add_argument("-noci", "--noci", action="store_true", dest="ci_skip
                            help='Make commit with CI Ignore')
 
 github_arg_group = parser.add_argument_group('GitHub API control arguments')
-github_arg_group.add_argument("-fv", "--fetchversions", action="store_true", dest="fetch_github_versions",
+github_arg_group.add_argument("-fv", "--fetchversions", action="store_true", dest="fetch_versions",
                               default=False,
                               help='Fetch last released versions from github')
 github_arg_group.add_argument("-nf", "--newfeature", action="store", dest="new_feature",
@@ -430,39 +430,62 @@ class Module(object):
             return
         # repository = github.get_organization(par['github'].split("/")[0]).get_repo(par['github'].split("/")[1])
         repository = github.get_repo(self.github)
-        if self.branch == 'master':
-            for tag in repository.get_tags():
+        for tag in repository.get_tags():
+            if self.branch == 'master':
                 if tag.name and re.match(r'^v(\d+\.)?(\d+\.)?(\*|\d+)$', tag.name):
                     ver = tag.name.strip()[1:]  # .encode('ascii', 'ignore')
-                    if self.version != ver:
-                        print(
-                            f"{Fore.YELLOW}Updating release version of {Fore.GREEN}{self.name}{Fore.YELLOW}: "
-                            f"{Fore.GREEN}{self.version} {Fore.YELLOW}=>{Fore.GREEN} {ver}")
-                        # if version.parse(ver) < version.parse(self.version):
-                        #     raise SystemExit(
-                        #         f"{Fore.RED}{version.parse(ver)} in properties smaller than {version.parse(self.version)} on project-meta.yml: "
-                        #         f"{self.name}")
-                        self.version = ver
-                        return True
-                    else:
-                        return False
-        else:
-            for tag in repository.get_tags():
+                else:
+                    return False
+            else:
                 _branch = re.sub(r"[\ #,\\\"'/;-]", "_", self.branch)
                 if tag.name and re.match(r'^v.*' + _branch + '.*', tag.name):
-                    ver = tag.name.strip()[1:]  # .encode('ascii', 'ignore')                  
-                    if self.version != ver:
-                        print(
-                            f"{Fore.YELLOW}Updating version of {Fore.GREEN}{self.name}{Fore.YELLOW}: "
-                            f"{Fore.GREEN}{self.version} {Fore.YELLOW}=>{Fore.GREEN} {ver}")
-                        # if version.parse(ver) < version.parse(self.version):
-                        #     raise SystemExit(
-                        #         f"{Fore.RED}{version.parse(ver)} in properties smaller than {version.parse(self.version)} on project-meta.yml: "
-                        #         f"{self.name}")
-                        self.version = ver
-                        return True
-                    else:
-                        return False
+                    ver = tag.name.strip()[1:]  # .encode('ascii', 'ignore')
+                else:
+                    return False
+
+            if self.version != ver:
+                print(
+                    f"{Fore.YELLOW}Updating release version of {Fore.GREEN}{self.name}{Fore.YELLOW}: "
+                    f"{Fore.GREEN}{self.version} {Fore.YELLOW}=>{Fore.GREEN} {ver}")
+                # if version.parse(ver) < version.parse(self.version):
+                #     raise SystemExit(
+                #         f"{Fore.RED}{version.parse(ver)} in properties smaller than {version.parse(self.version)} on project-meta.yml: "
+                #         f"{self.name}")
+                self.version = ver
+                return True
+            else:
+                return False
+        return False
+
+    def update_git_tag_versions(self):
+        if self.ignored:
+            return
+        tags = reversed(sorted(self.get_remote_tags().keys()))
+        for tag in tags:
+            if self.branch == 'master':
+                if tag and re.match(r'^v(\d+\.)?(\d+\.)?(\*|\d+)$', tag):
+                    ver = tag.strip()[1:]  # .encode('ascii', 'ignore')
+                else:
+                    return False
+            else:
+                _branch = re.sub(r"[\ #,\\\"'/;-]", "_", self.branch)
+                if tag and re.match(r'^v.*' + _branch + '.*', tag):
+                    ver = tag.strip()[1:]  # .encode('ascii', 'ignore')
+                else:
+                    return False
+
+            if self.version != ver:
+                print(
+                    f"{Fore.YELLOW}Updating release version of {Fore.GREEN}{self.name}{Fore.YELLOW}: "
+                    f"{Fore.GREEN}{self.version} {Fore.YELLOW}=>{Fore.GREEN} {ver}")
+                # if version.parse(ver) < version.parse(self.version):
+                #     raise SystemExit(
+                #         f"{Fore.RED}{version.parse(ver)} in properties smaller than {version.parse(self.version)} on project-meta.yml: "
+                #         f"{self.name}")
+                self.version = ver
+                return True
+            else:
+                return False
         return False
 
     def update_dependency_versions_in_pom(self, write_pom=False):
@@ -531,18 +554,45 @@ class Module(object):
         _repo = self.repo()
         print(f"{Fore.YELLOW}Checkout branch {Fore.GREEN}{self.branch} {Fore.YELLOW}in {Fore.GREEN}{_repo.git_dir}")
         if self.check_dirty():
-            _repo.git.stash("-m \"[AUTO STASH]\"")
+            print(f"{Fore.YELLOW} - Module is in dirty state, stashing")
+            _repo.git.stash(["-u", "-m \"[AUTO STASH]\""])
         # _repo.git.checkout(self.branch)
         # _repo.git.pull()
 
-        _repo.git.fetch()
+        # _repo.git.fetch()
+
+        _updates = _repo.git.fetch(["--no-tags", "--force", "origin"])
+        # _updates = _repo.git.fetch(["--tags", "--force", "origin"])
+        _updates = _repo.remotes.origin.fetch()
+        for fetch_info in _updates:
+            print(f"Tag: {fetch_info.ref} Author: {fetch_info.ref.commit.author} SHA: {fetch_info.ref.commit.hexsha}")
+        #
+        # _updates = _repo.remotes.origin.fetch()
+        # for fetch_info in _updates:
+        #   print(f"Tag: {fetch_info.ref} Author: {fetch_info.ref.commit.author} SHA: {fetch_info.ref.commit.hexsha}")
+
         # Create a new branch
         # repo.git.branch('my_new_branch')
         # You need to check out the branch after creating it if you want to use it
         _repo.git.checkout(self.branch)
         _repo.git.reset()
-#        _repo.git.pull()
+        #_repo.git.merge( self.branch, no_ff = True, no_commit = True)
         _repo.remotes.origin.pull()
+
+    def checkout_tags(self):
+        _repo = self.repo()
+        _repo.git.fetch(["--tags", "--force", "origin"])
+
+    def get_remote_tags(self):
+        _repo = self.repo()
+        remote_refs = {}
+        for ref in _repo.git.ls_remote("--tags").split('\n'):
+            if not ref.startswith("From "):
+                hash_ref_list = ref.split('\t')
+                if len(hash_ref_list) == 2:
+                    if hash_ref_list[1].startswith("refs/tags/"):
+                        remote_refs[hash_ref_list[1].removeprefix("refs/tags/")] = hash_ref_list[0]
+        return remote_refs
 
     def check_dirty(self):
         _currentDir = os.getcwd() + '/' + self.path
@@ -587,7 +637,8 @@ class Module(object):
         _repo = github.get_repo(self.github)
 
         if " " in _branch_name:
-            print(f"{Fore.YELLOW}Sanitizing branch name: {Fore.GREEN}{_branch_name} {Fore.YELLOW}=> {Fore.GREEN}{_branch_name.replace(' ', '_')}")
+            print(
+                f"{Fore.YELLOW}Sanitizing branch name: {Fore.GREEN}{_branch_name} {Fore.YELLOW}=> {Fore.GREEN}{_branch_name.replace(' ', '_')}")
             _branch_name = _branch_name.replace(" ", "_")
 
         found = False
@@ -638,7 +689,8 @@ class Module(object):
             _message = match.group(1)
 
         try:
-            print(f"{Fore.YELLOW}Creating pull request in {Fore.GREEN}{self.name} {Fore.YELLOW}on branch {Fore.GREEN}{self.branch}")
+            print(
+                f"{Fore.YELLOW}Creating pull request in {Fore.GREEN}{self.name} {Fore.YELLOW}on branch {Fore.GREEN}{self.branch}")
             _repo.create_pull(
                 title=_message,
                 body=_message,
@@ -661,14 +713,24 @@ def process_module(par, _modules, _module_by_name):
             process_module(_item, _modules, _module_by_name)
 
 
-def load_modules(filename="project-meta.yml"):
-    with open(filename, 'r') as stream:
+def load_modules(filename="project-meta.yml", str=""):
+    if filename:
+        with open(filename, 'r') as stream:
+            try:
+                _results = yaml.load(stream, Loader=yaml.FullLoader)
+                return _results
+            except yaml.YAMLError as exc:
+                print(exc)
+                raise exc
+    elif str:
         try:
-            _results = yaml.load(stream, Loader=yaml.FullLoader)
+            _results = yaml.load(str, Loader=yaml.FullLoader)
             return _results
         except yaml.YAMLError as exc:
             print(exc)
             raise exc
+    else:
+        raise SystemExit(f"filename or str have to be defined")
 
 
 def calculate_graph(_modules):
@@ -756,6 +818,31 @@ def save_modules(_modules, _module_by_name):
 
     for _module in _modules:
         _module.resolve_dependencies(_module_by_name)
+
+
+def check_module_depenencies(_modules, _module_by_name):
+    current_pom_version
+    _errors = []
+    _pending_changes = False
+    for _module in _modules:
+        if not _module.virtual:
+            for _module_to_check in _modules:
+                version_in_pom = current_pom_version(_module, _module_to_check)
+                if version_in_pom:
+                    if not _module_to_check in _module.dependencies:
+                        print(f"{Fore.GREEN}{_module.name}{Fore.YELLOW} - doesn't contain {Fore.GREEN}{_module_to_check.name}{Fore.YELLOW} in dependencies, but {Fore.GREEN}{_module.path}/pom.xml{Fore.YELLOW} have {Fore.GREEN}{_module_to_check.property}")
+                        _module.dependencies.append(_module_to_check)
+                        _pending_changes = True
+                else:
+                    if _module_to_check in _module.dependencies:
+                        _errors.append(f"{Fore.RED}{_module.name} - Property definition {Fore.GREEN}{_module_to_check.property}{Fore.RED} is missing in {Fore.GREEN}{_module.path}/pom.xml")
+
+    if len(_errors)> 0:
+        for _error in _errors:
+            print(f"{_error}\n")
+        raise SystemExit(f"\n{Fore.RED}Errors found in module dependencies.")
+    if not args.dirty and _pending_changes:
+        save_modules(_modules, _module_by_name)
 
 
 def print_dependency_graph(_modules):
@@ -858,7 +945,7 @@ def start_process_info_server(_modules, _process_info):
     return httpd
 
 
-def check_modules_for_update(_modules, _module_by_name, _processing_modules = set()):
+def check_modules_for_update(_modules, _module_by_name, _processing_modules=set()):
     # Check implications on modules
     _updated_modules = set()
     for _module in _modules:
@@ -899,13 +986,13 @@ def check_modules_for_update(_modules, _module_by_name, _processing_modules = se
 
 # =============================== Initial version fetching
 
-def fetch_github_versions(_modules):
+def fetch_versions(_modules):
     for _module in _modules:
         if not _module.ignored:
             print(
                 f"{Fore.YELLOW}Checking latest release for {Fore.GREEN}{_module.name}{Fore.YELLOW} in branch: "
                 f"{Fore.GREEN}{_module.branch}")
-            _module.update_github_versions()
+            _module.update_git_tag_versions()
 
 
 def current_snapshot_version(_module):
@@ -1207,7 +1294,7 @@ def build_continuous(_modules, _process_info, _module_by_name):
             print(
                 f"{Fore.YELLOW}Checking latest release for {Fore.GREEN}{_module.name}{Fore.YELLOW} in branch: "
                 f"{Fore.GREEN}{_module.branch}")
-            if _module.update_github_versions():
+            if _module.update_git_tag_versions():
                 print("  NEW Version, it removed from wait list")
                 _process_info[_module] = {"status": "OK"}
                 _removable_modules.add(_module)
@@ -1272,6 +1359,8 @@ _processable_modules = calculate_processable_modules(modules, process_info, modu
 
 print_dependency_graph_ascii(_processable_modules)
 
+check_module_depenencies(modules, module_by_name)
+
 # =============================== Fetch / Checkout / Reset Git
 if args.git_checkout:
     _currentDir = os.getcwd()
@@ -1279,21 +1368,26 @@ if args.git_checkout:
     # for _submodule in _repo.submodules:
     #    print(f"{Fore.YELLOW}Update submodule {Fore.GREEN}{_submodule.name}{Style.RESET_ALL}")
     #    _submodule.update(init=True)
-
     _modules = tqdm(_processable_modules)
     for _module in _modules:
         if not _module.virtual:
+            _submodule_repo = _module.repo()
             _modules.set_description(_module.name)
+            print(f"{Fore.YELLOW}Checkout submodule {Fore.GREEN}{_module.branch} {Fore.YELLOW}in {Fore.GREEN}{_submodule_repo.git_dir}")
+            if _module.check_dirty():
+                print(f"{Fore.YELLOW} - Submodule is in dirty state, stashing")
+                _module.repo().git.stash(["-u", "-m \"[AUTO STASH]\""])
+
             # print(f"{Fore.YELLOW}Update submodule {Fore.GREEN}{_module.name}{Style.RESET_ALL}")
             _repo.submodule(_module.path).update(init=True)
             # print(f"{Fore.YELLOW}Set branch {Fore.GREEN}{_module.branch}{Fore.YELLOW} for {Fore.GREEN}{_module.name}{Style.RESET_ALL}")
             _module.checkout_branch()
 
-if args.fetch_github_versions:
-    fetch_github_versions(modules)
+if args.fetch_versions:
+    fetch_versions(_processable_modules)
 
 if args.integration_build:
-    fetch_github_versions(_processable_modules)
+    fetch_versions(_processable_modules)
 
 if args.new_feature:
     for _module in _processable_modules:
@@ -1328,7 +1422,6 @@ if args.create_pr and not args.new_feature:
     for _module in _processable_modules:
         if not _module.virtual and not _module.ignored:
             _module.create_pull_request(args.create_pr[0])
-
 
 if args.update_module_pom:
     for module in _processable_modules:
@@ -1373,26 +1466,28 @@ if args.continuous_update or args.integration_build:
     build_continuous(_processable_modules, process_info, module_by_name)
 
 if args.relnotes:
-    currentDir = os.getcwd()
+    _currentDir = os.getcwd()
+    _rootRepo = git.Repo(os.getcwd())
     hashes = args.relnotes[0].split("..")
     if len(hashes) == 2:
-        current_file_name = "project-meta-" + hashes[1] + ".yml"
-        call("git show " + hashes[1] + ":project-meta.yml", shell=True, stdout=open(current_file_name, "w"))
+        current_modules_loaded = load_modules(filename='', str=_rootRepo.git.show(hashes[1] + ":project-meta.yml"))
     else:
-        current_file_name = "project-meta-current.yml"
-        shutil.copyfile("project-meta.yml", current_file_name)
+        current_modules_loaded = load_modules()
+
     current_modules_by_name = {}
     current_modules = []
-    for item in load_modules(current_file_name):
+
+    for item in current_modules_loaded:
         process_module(item, current_modules, current_modules_by_name)
 
-    previous_file_name = "project-meta-" + hashes[0] + ".yml"
-    call("git show " + hashes[0] + ":project-meta.yml", shell=True, stdout=open(previous_file_name, "w"))
+    previous_modules_loaded = load_modules(filename='', str=_rootRepo.git.show(hashes[0] + ":project-meta.yml"))
+
     previous_modules_by_name = {}
     previous_modules = []
-    for item in load_modules(previous_file_name):
+    for item in previous_modules_loaded:
         process_module(item, previous_modules, previous_modules_by_name)
     new_modules = []
+
     module_versions = {}
     for module in current_modules:
         if module.name in previous_modules_by_name:
@@ -1405,49 +1500,51 @@ if args.relnotes:
     issues = set()
 
     for module in current_modules:
-        if module.name in module_versions:
+        if module.name in module_versions and not module.ignored:
             if (module.version != module_versions[module.name][1]):
+
                 print(f"Getting logs for {module.name}")
-                from_tag = ''
-                to_tag = ''
-                try:
-                    from_tag = module_versions[module.name][1]
-                    command = f"git rev-parse -q --verify \"refs/tags/{from_tag}\" >/dev/null"
-                    check_output(command, shell=True, cwd=currentDir + "/" + module.path)
-                except:
-                    try:
-                        from_tag = "v" + module_versions[module.name][1]
-                        command = f"git rev-parse -q --verify \"refs/tags/{from_tag}\" >/dev/null"
-                        check_output(command, shell=True, cwd=currentDir + "/" + module.path)
-                    except:
-                        print("Version tag: {module_versions[module.name][1]} not found for {module.name}")
 
-                try:
-                    to_tag = module_versions[module.name][0]
-                    command = f"git rev-parse -q --verify \"refs/tags/{to_tag}\" >/dev/null"
-                    check_output(command, shell=True, cwd=currentDir + "/" + module.path)
-                except:
-                    try:
-                        to_tag = "v" + module_versions[module.name][0]
-                        command = f"git rev-parse -q --verify \"refs/tags/{to_tag}\" >/dev/null"
-                        check_output(command, shell=True, cwd=currentDir + "/" + module.path)
-                    except:
-                        print("Version tag: {module_versions[module.name][1]} not found for {module.name}")
+                from_tag = module_versions[module.name][1]
+                to_tag = module_versions[module.name][0]
 
-                if from_tag and to_tag:
-                    command = f"git log --pretty=oneline {from_tag}..{to_tag}"
-                    log_output = check_output(command, shell=True, cwd=currentDir + "/" + module.path)
+                tags = module.get_remote_tags()
 
-                    for line in log_output.splitlines():
-                        m = re.search('JNG-\\d+', line.decode())
+                from_sha = ''
+                to_sha = ''
+                for tag in tags:
+                    short_sha = module.repo().git.rev_parse(tags[tag], short=True)
+                    # print(f"{tagref} {short_sha}")
+                    if f"{tag}" == from_tag or f"{tag}" == f"v{from_tag}":
+                        from_sha = short_sha
+                    if f"{tag}" == to_tag or f"{tag}" == f"v{to_tag}":
+                        to_sha = short_sha
+
+                # Local tag chackout
+                # module.checkout_tags()
+                # for tagref in module.repo().tags:
+                #     short_sha = module.repo().git.rev_parse(tagref.commit, short=True)
+                #     if f"{tagref}" == from_tag or f"{tagref}" == f"v{from_tag}":
+                #         from_sha = short_sha
+                #     if f"{tagref}" == to_tag or f"{tagref}" == f"v{to_tag}":
+                #         to_sha = short_sha
+
+                if not from_sha:
+                    print(f"Version tag: {from_tag} not found for {module.name}")
+                if not to_sha:
+                    print(f"Version tag: {to_tag} not found for {module.name}")
+
+                if from_sha and to_sha:
+                    for line in module.repo().git.log(
+                            '{}..{} --pretty=oneline'.format(from_sha, to_sha).split()).splitlines():
+                        m = re.search('JNG-\\d+', line)
                         if m:
+                            print(f"Commit: {line}")
                             issues.add(m.group())
 
     for module in new_modules:
-        command = f"git log --pretty=oneline"
-        log_output = check_output(command, shell=True, cwd=currentDir + "/" + module.path)
-        for line in log_output.splitlines():
-            m = re.search('JNG-\\d+', line.decode())
+        for line in module.repo().git.log('--pretty=oneline'.format(from_sha, to_sha).split()).splitlines():
+            m = re.search('JNG-\\d+', line)
             if m:
                 issues.add(m.group())
 
