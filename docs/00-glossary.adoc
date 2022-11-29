@@ -6,21 +6,24 @@ This section defines some useful terms, expressions and acronyms because the doc
 |===
 |Term / Expression / Acronym | Definition / Description
 
-|*Document section*
+|[#document-section]*Document section*
 |TODO
 
-|*Requirement*
-|TODO
+|[#requirement]*Requirement*
+|In JUDO context the requirement and the link:#feature[feature] are synonyms each other.
 
-|*judo-reqprefix*
-|TODO
+|[#judo-reqprefix]*judo-reqprefix*
+|This is an asciidoc element attribute. You can use this attribute
 
-|*judo-req*
-a|See link:#judo-requirement[judo-requirement]
+|[#judo-req]*judo-req*
+|See: link:#judo-requirement[judo-requirement]
 
-a|[#judo-requirement]*judo-requirement*
-|TODO
+|[#judo-requirement]*judo-requirement*
+|This is an asciidoc element attribute. You can use this attribute to mark a document section as a requirement that defines a JUDO link:#feature[feature]. You can use this attribute only header element, other case it will be skipped.
 
-|*Metadata of document*
-|TODO
+|[#metadata]*Metadata of document*
+|In practice this is an asciidoc document attribute, that doesn't appear directly in the document, but it can be used indirectly, or it can control or influence any process of document generalisation or any CI/CD process.
+
+|[#feature]*Feature*
+|A _feature_ can be any functional or non-functional requirement, or any behavioural description that defines how JUDO should work.
 |===

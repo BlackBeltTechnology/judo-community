@@ -1,9 +1,12 @@
 = How to write and change the functional documentation
 
-Here is defined and described what you have to do when you add a new feature to the JUDO ecosystem, or you modify also existing feature.
+Here is defined and described what you have to do when you add a new feature (e.g.: functional or non-functional requirement) to the JUDO ecosystem, or you modify also existing feature.
 
-== How to add new section
+== How to add a new feature or requirement
 
+This section describes how you can add new feature to the JUDO framework. This may be an addition function into an existing domain (e.g.: adding a new string function: trim), or a totally new feature domain (e.g.: transfer objects). In the first case enough link:#newsection[to modify an existing adoc file], and the second case you necessary link:#newadoc[to add a new adoc file].
+
+[#newadoc]
 === Adding new adoc file
 
 If you add a new functional definition document (*.adoc), you need to add a _judo-reqprefix_ document attribute (metadata) to the adoc file. It is a short character string, which will be used in the unique identifier generation, therefore it must be unique in the JUDO project.
@@ -22,7 +25,7 @@ If you add a new functional definition document (*.adoc), you need to add a _jud
 TODO
 
 [#newsection]
-=== Adding new section into an adoc document
+=== Adding new section into an existing adoc document
 
 If you create a new section in an existing or new functional requirement document, that is defines a requirement or a behaviour, you need to add an extra _judo-requirement_ or _judo-req_ boolean type attribute to the header of the sections.
 
@@ -48,6 +51,11 @@ If you create a new section in an existing or new functional requirement documen
 
 ----
 
+When you finish the function description you have to implement it, and link:02-how_to_write_tests.adoc[to define and to write the necessary test cases].
+
 == How to change a document section
 
 TODO
+
+
+== Update the test

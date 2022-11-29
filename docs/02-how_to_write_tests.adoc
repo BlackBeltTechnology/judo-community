@@ -2,4 +2,10 @@
 
 Here is defined and described what is the test writing methodology. If you add a new test, you have to follow these directions.
 
+== Create new test case
+
+TODO
+
+== Modify an existing test case
+
 TODO
