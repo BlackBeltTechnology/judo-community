@@ -51,11 +51,13 @@ If you create a new section in an existing or new functional requirement documen
 
 ----
 
-When you finish the function description you have to implement it, and link:02-how_to_write_tests.adoc[to define and to write the necessary test cases].
+When you finish the function description you have to implement it, and link:#testcases[to define and to write the necessary test cases].
 
 == How to change a document section
 
-TODO
+If you changed any existing feature / requirement you have a little additional tasks. Update the related test cases or add new test cases if necessary. See the link:#testcases[Update test cases]
 
-
+[#testcases]
 == Update the test
+
+If you have modified any requirement you will need to update the related test cases, or add new test cases. See the link:02-how_to_write_tests.adoc[How to write tests] document for the practical details.
