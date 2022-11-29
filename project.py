@@ -706,6 +706,17 @@ class Module(object):
         except Exception as e:
             print(f"{Fore.RED}Creating pull request in {self.name} on branch {self.branch} failed: {e}")
 
+    def perform_release(self):
+        # Check all dependency is in master branch
+        for _dep in self.dependencies:
+            if _dep.branch != "master":
+                print(f"{Fore.RED} Error in {self.name} - Dependency: {_dep.name} not in master branch, "
+                      f"instead of: {_dep.branch}")
+                raise SystemExit(1)
+        self.branch = "master"
+        _tag = self.repo().create_tag("perform-release-on-" + self.version, "[RELEASE] Perform release")
+        self.repo().remotes.origin.push(_tag)
+
 
 def process_module(par, _modules, _module_by_name):
     if type(par) is dict:
@@ -953,7 +964,7 @@ def start_process_info_server(_modules, _process_info):
     return httpd
 
 
-def update_modules_versions(_modules, _module_by_name, _processing_modules=None, _release_build=False):
+def update_modules_versions(_modules, _module_by_name, _processing_modules=None):
     if _processing_modules is None:
         _processing_modules = set()
     _updated_modules = set()
@@ -1293,6 +1304,15 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
                        _modules))) + f"{Style.RESET_ALL}\n")
 
     _modules_to_process = update_modules_versions(_modules, _module_by_name, _release_build)
+
+    if _release_build:
+        _modules_to_release = filter(lambda _module: _module == "develop" and not _module.ignored,
+                                     _modules.difference(_modules.difference(_modules_to_process)))
+        for _module in _modules_to_release:
+            _module.perform_release()
+
+        _modules_to_process.union(_modules_to_release)
+
     for _module in _modules:
         _process_info[module] = {"status": "WAITING"}
 
@@ -1309,13 +1329,18 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
             if _module.update_git_tag_versions():
                 print("  NEW Version, it removed from wait list")
                 _process_info[_module] = {"status": "OK"}
-                _removable_modules.add(_module)
+                if _release_build and _module.branch == "develop":
+                    _module.perform_release
+                elif _release_build and _module.branch == "master":
+                    _removable_modules.add(_module)
+                    _module.ignored = True
+                else:
+                    _removable_modules.add(_module)
 
         if len(_removable_modules) > 0:
             _modules_to_process = _modules_to_process.difference(_removable_modules)
             _new_modules_to_process = update_modules_versions(_modules, _module_by_name,
-                                                              _processing_modules=_modules_to_process,
-                                                              _release_build=_release_build)
+                                                              _processing_modules=_modules_to_process)
             for _new_module in _new_modules_to_process.union(_modules_to_process):
                 _removable_modules = _removable_modules.union(set(
                     ancestors(calculate_graph(_modules), _new_module)))
@@ -1481,6 +1506,10 @@ if args.run_postchangescripts:
 if args.continuous_update or args.integration_build:
     server_start(processable_modules, process_info)
     build_continuous(processable_modules, process_info, module_by_name)
+
+if args.release_build:
+    server_start(processable_modules, process_info)
+    build_continuous(processable_modules, process_info, module_by_name, _release_build=True)
 
 if args.relnotes:
     currentDir = os.getcwd()
