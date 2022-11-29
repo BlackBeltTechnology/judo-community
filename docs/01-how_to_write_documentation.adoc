@@ -4,7 +4,7 @@ Here is defined and described what you have to do when you add a new feature (e.
 
 == How to add a new feature or requirement
 
-This section describes how you can add new feature to the JUDO framework. This may be an addition function into an existing domain (e.g.: adding a new string function: trim), or a totally new feature domain (e.g.: transfer objects). In the first case enough link:#newsection[to modify an existing adoc file], and the second case you necessary link:#newadoc[to add a new adoc file].
+This section describes how you can add new feature to the JUDO framework. This may be an addition function into an existing domain (e.g.: adding a new string function: trim), or a totally new feature domain (e.g.: transfer objects). In the first case enough xref:#newsection[to modify an existing adoc file], and the second case you necessary xref:#newadoc[to add a new adoc file].
 
 [#newadoc]
 === Adding new adoc file
@@ -51,13 +51,13 @@ If you create a new section in an existing or new functional requirement documen
 
 ----
 
-When you finish the function description you have to implement it, and link:#testcases[to define and to write the necessary test cases].
+When you finish the function description you have to implement it, and xref:#testcases[to define and to write the necessary test cases].
 
 == How to change a document section
 
-If you changed any existing feature / requirement you have a little additional tasks. Update the related test cases or add new test cases if necessary. See the link:#testcases[Update test cases]
+If you changed any existing feature / requirement you have a little additional tasks. Update the related test cases or add new test cases if necessary. See the xref:#testcases[Update test cases]
 
 [#testcases]
 == Update the test
 
-If you have modified any requirement you will need to update the related test cases, or add new test cases. See the link:02-how_to_write_tests.adoc[How to write tests] document for the practical details.
+If you have modified any requirement you will need to update the related test cases, or add new test cases. See the xref:02-how_to_write_tests.adoc[How to write tests] document for the practical details.
