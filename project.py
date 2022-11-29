@@ -229,6 +229,9 @@ general_arg_group.add_argument("-d", "--dirty", action="store_true", dest="dirty
 general_arg_group.add_argument("-ib", "--integration_build", action="store_true", dest="integration_build",
                                default=False,
                                help='Continuous integration build. (same as -fv -pu -up -cu)')
+general_arg_group.add_argument("-rb", "--release_build", action="store_true", dest="release_build",
+                               default=False,
+                               help='Continuous integration build. (same as -fv -pu -up -cu)')
 general_arg_group.add_argument("-cu", "--continuous", action="store_true", dest="continuous_update", default=False,
                                help='Continuously update / fetch / wait until last level')
 general_arg_group.add_argument("-sm", "--start-modules", action="store", dest="start_modules", default=None,
@@ -558,27 +561,14 @@ class Module(object):
         if self.check_dirty():
             print(f"{Fore.YELLOW} - Module is in dirty state, stashing")
             _repo.git.stash(["-u", "-m \"[AUTO STASH]\""])
-        # _repo.git.checkout(self.branch)
-        # _repo.git.pull()
-
-        # _repo.git.fetch()
 
         _updates = _repo.git.fetch(["--no-tags", "--force", "origin"])
-        # _updates = _repo.git.fetch(["--tags", "--force", "origin"])
         _updates = _repo.remotes.origin.fetch()
         for fetch_info in _updates:
             print(f"Tag: {fetch_info.ref} Author: {fetch_info.ref.commit.author} SHA: {fetch_info.ref.commit.hexsha}")
-        #
-        # _updates = _repo.remotes.origin.fetch()
-        # for fetch_info in _updates:
-        #   print(f"Tag: {fetch_info.ref} Author: {fetch_info.ref.commit.author} SHA: {fetch_info.ref.commit.hexsha}")
 
-        # Create a new branch
-        # repo.git.branch('my_new_branch')
-        # You need to check out the branch after creating it if you want to use it
         _repo.git.checkout(self.branch)
-        _repo.git.reset()
-        # repo.git.merge( self.branch, no_ff = True, no_commit = True)
+        _repo.head.reset(index=True, working_tree=True)
         _repo.remotes.origin.pull()
 
     def checkout_tags(self):
@@ -860,8 +850,7 @@ def check_module_depenencies(_modules, _module_by_name):
         for _error in _errors:
             print(f"{_error}\n")
         raise SystemExit(f"\n{Fore.RED}Errors found in module dependencies.")
-    if not args.dirty and _pending_changes:
-        save_modules(_modules, _module_by_name)
+    return _pending_changes
 
 
 def print_dependency_graph(_modules):
@@ -987,18 +976,18 @@ def update_modules_versions(_modules, _module_by_name, _processing_modules=None)
                        _updated_modules))) + f"{Style.RESET_ALL}\n")
 
     for _module in _updated_modules:
-        if args.update_pom or args.integration_build:
+        if args.update_pom or args.integration_build or args.release_build:
             print(f"{Fore.YELLOW}Writing changes to {Fore.GREEN}{_module.name}")
             _module.update_dependency_versions_in_pom(True)
 
-        if (args.update_pom or args.integration_build) and not args.run_postchangescripts:
+        if (args.update_pom or args.integration_build or args.release_build) and not args.run_postchangescripts:
             print("Running post change scripts")
             if not _module.call_postchangescripts():
                 print(f"\n{Fore.RED}Error when calling post change script on {_module.name}.")
                 if not args.dirty:
                     save_modules(_modules, _module_by_name)
                 exit(1)
-        if args.push_updates or args.integration_build:
+        if args.push_updates or args.integration_build or args.release_build:
             print("Pushing updates to " + _module.name)
             _module.commit_and_push_changes()
     return _updated_modules
@@ -1306,7 +1295,8 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
     _modules_to_process = update_modules_versions(_modules, _module_by_name, _release_build)
 
     if _release_build:
-        _modules_to_release = filter(lambda _module: _module == "develop" and not _module.ignored,
+        _modules_to_release = filter(lambda _module: _module == "develop" and not _module.ignored and len(list(
+            filter(lambda _dep_module: _dep_module.branch != "master", _module.dependencies))) == 0,
                                      _modules.difference(_modules.difference(_modules_to_process)))
         for _module in _modules_to_release:
             _module.perform_release()
@@ -1330,7 +1320,7 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
                 print("  NEW Version, it removed from wait list")
                 _process_info[_module] = {"status": "OK"}
                 if _release_build and _module.branch == "develop":
-                    _module.perform_release
+                    _module.perform_release()
                 elif _release_build and _module.branch == "master":
                     _removable_modules.add(_module)
                     _module.ignored = True
@@ -1398,7 +1388,9 @@ processable_modules = calculate_processable_modules(modules, process_info, modul
 
 print_dependency_graph_ascii(processable_modules)
 
-check_module_depenencies(modules, module_by_name)
+pending_changes = check_module_depenencies(modules, module_by_name)
+if not args.dirty and pending_changes:
+    save_modules(modules, module_by_name)
 
 # =============================== Fetch / Checkout / Reset Git
 if args.git_checkout:
@@ -1407,19 +1399,21 @@ if args.git_checkout:
     # for _submodule in repo.submodules:
     #    print(f"{Fore.YELLOW}Update submodule {Fore.GREEN}{_submodule.name}{Style.RESET_ALL}")
     #    _submodule.update(init=True)
-    modules = tqdm(processable_modules)
-    for module in modules:
+    modules_to_check = tqdm(processable_modules)
+    for module in modules_to_check:
         if not module.virtual:
             submodule_repo = module.repo()
-            modules.set_description(module.name)
+            modules_to_check.set_description(module.name)
             print(f"{Fore.YELLOW}Checkout submodule {Fore.GREEN}{module.branch} {Fore.YELLOW} in "
                   f"{Fore.GREEN}{submodule_repo.git_dir}")
             if module.check_dirty():
                 print(f"{Fore.YELLOW} - Submodule is in dirty state, stashing")
                 module.repo().git.stash(["-u", "-m \"[AUTO STASH]\""])
 
-            # print(f"{Fore.YELLOW}Update submodule {Fore.GREEN}{_module.name}{Style.RESET_ALL}")
-            repo.submodule(module.path).update(init=True)
+            if not os.path.exists(module.path):
+                print(f"{Fore.YELLOW}Update submodule {Fore.GREEN}{module.name}{Style.RESET_ALL}")
+                repo.submodule(module.path).update(init=True, to_latest_revision=True, force=True)
+
             # print(f"{Fore.YELLOW}Set branch {Fore.GREEN}{_module.branch}{Fore.YELLOW} for {Fore.GREEN}{_module.name}
             # {Style.RESET_ALL}")
             module.checkout_branch()
@@ -1427,7 +1421,7 @@ if args.git_checkout:
 if args.fetch_versions:
     fetch_versions(processable_modules)
 
-if args.integration_build:
+if args.integration_build or args.release_build:
     fetch_versions(processable_modules)
 
 if args.new_feature:
@@ -1499,11 +1493,11 @@ if args.run_postchangescripts:
                 if not args.dirty:
                     save_modules(modules, module_by_name)
                 exit(1)
-            if args.push_updates or args.integration_build:
+            if args.push_updates or args.integration_build or args.release_build:
                 module.commit_and_push_changes()
 
 # ================================ Checking for updates
-if args.continuous_update or args.integration_build:
+if args.continuous_update or args.integration_build or args.release_build:
     server_start(processable_modules, process_info)
     build_continuous(processable_modules, process_info, module_by_name)
 
