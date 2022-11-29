@@ -118,15 +118,15 @@
   url: git@github.com:BlackbeltTechnology/judo-misc-p2.git
   version: 1.0.0
   virtual: false
-- branch: develop
+- branch: master
   github: BlackbeltTechnology/judo-dao-api
-  ignored: false
+  ignored: true
   name: judo-dao-api
   path: judo-dao-api
   property: judo-dao-api-version
   rank: 1
   url: git@github.com:BlackbeltTechnology/judo-dao-api.git
-  version: 1.0.3.20221107_125042_022117fe_develop
+  version: 1.0.3
   virtual: false
 - branch: master
   github: BlackbeltTechnology/judo-dispatcher-api
@@ -516,7 +516,7 @@
   name: judo-runtime-core-jsl
   path: judo-runtime-core-jsl
   property: judo-runtime-core-jsl-version
-  rank: 7
+  rank: 8
   url: git@github.com:BlackbeltTechnology/judo-runtime-core-jsl.git
   version: 1.0.2.20221125_111252_6e58e64f_develop
   virtual: false
@@ -566,15 +566,12 @@
   dependencies:
   - epsilon-runtime
   - emf-genmodel-generator
-  - judo-dispatcher-api
-  - judo-dao-api
-  - judo-meta-asm
   github: BlackbeltTechnology/judo-tatami-core
   ignored: false
   name: judo-tatami-core
   path: judo-tatami-core
   property: judo-tatami-core-version
-  rank: 3
+  rank: 2
   url: git@github.com:BlackbeltTechnology/judo-tatami-core.git
   version: 1.1.3.20221125_110318_33cfff34_develop
   virtual: false
@@ -595,12 +592,13 @@
   - judo-tatami-core
   - judo-tatami-base
   - epsilon-runtime
+  - judo-runtime-core
   github: BlackbeltTechnology/judo-tatami-jsl
   ignored: false
   name: judo-tatami-jsl
   path: judo-tatami-jsl
   property: judo-tatami-jsl-version
-  rank: 6
+  rank: 7
   url: git@github.com:BlackbeltTechnology/judo-tatami-jsl.git
   version: 1.1.3.20221125_110749_8b6371bc_develop
   virtual: false
@@ -615,7 +613,7 @@
   name: judo-jsl-springboot-parent
   path: judo-jsl-springboot-parent
   property: judo-jsl-springboot-parent-version
-  rank: 7
+  rank: 8
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-parent.git
   version: 1.0.4.20221027_090301_8c6436d1_develop
   virtual: false
