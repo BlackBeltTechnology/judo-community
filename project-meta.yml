@@ -206,7 +206,7 @@
   property: judo-meta-expression-version
   rank: 3
   url: git@github.com:BlackbeltTechnology/judo-meta-expression.git
-  version: 1.0.4.20221130_094028_31748ef8_develop
+  version: 1.0.4.20221130_124434_3106ff9a_develop
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
@@ -236,7 +236,7 @@
   property: judo-meta-expression-asm-version
   rank: 4
   url: git@github.com:BlackbeltTechnology/judo-meta-expression-asm.git
-  version: 1.0.4.20221130_101802_bb295c7a_develop
+  version: 1.0.4.20221130_131839_f05fa3b7_develop
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
@@ -469,7 +469,7 @@
   - judo-dispatcher-api
   - judo-meta-asm
   github: BlackbeltTechnology/judo-operation-utils
-  ignored: false
+  ignored: true
   name: judo-operation-utils
   path: judo-operation-utils
   property: judo-operation-utils-version

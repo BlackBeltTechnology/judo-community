@@ -969,7 +969,9 @@ def calculate_modules_to_update(_modules, _module_by_name, _processing_modules=N
     for _module in _modules:
         if not _module.ignored and not _module.virtual:
             # print("Checking dependency update in POM: " + module.name)
-            if _module.update_dependency_versions_in_pom(False) or (_release_build and _module.branch != "master"):
+            if _module.update_dependency_versions_in_pom(False) or (_release_build and _module.branch != "master" and
+
+                ):
                 _updated_modules.add(_module)
 
     # Removing modules which have dependency on current modules
@@ -1322,20 +1324,31 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
         f"\n".join(map(lambda _m: f"- {Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}",
                        _modules))) + f"{Style.RESET_ALL}\n")
 
-    for _module in calculate_modules_to_update(_modules, _module_by_name, _release_build=_release_build):
-        _error = False
+#    for _module in calculate_modules_to_update(_modules, _module_by_name, _release_build=_release_build):
+    _error = False
+    for _module in _modules:
+        if _module.branch not in ["master", "develop"]:
+            print(f"\n{Fore.RED}To release '{_module.name}' branch have to be 'develop' or 'master'. ")
+            _error = True
         if _module.update_dependency_versions_in_pom(False) and _module.branch == "master":
-            print(f"\n{Fore.RED}There is some update in dependency versions and {_module} branch is 'master'. "
+            print(f"\n{Fore.RED}There is some update in dependency versions while '{_module.name}' branch is 'master'. "
                   f"Please switch to develop or set it ignored.\n")
             _error = True
-        if _error:
-            raise SystemExit(1)
 
-    _modules_to_process = update_modules_versions(_modules, _module_by_name, _release_build=False)
+    if _error:
+        raise SystemExit(1)
 
     if _release_build:
-        _modules_to_release = calculate_modules_to_update(_modules, _module_by_name, _release_build=True).difference(_modules_to_process)
-        _wrong_dependency = []
+        _candidate_modules = filter(lambda _module:
+                                    len(list(
+                                        filter(lambda _dep_module: _dep_module.branch != 'master',
+                                               _module.dependencies))) == 0,
+                                    update_modules_versions(_modules, _module_by_name, _release_build=False))
+
+        _modules_to_release = calculate_modules_to_update(_modules, _module_by_name, _release_build=True)\
+            .difference(_candidate_modules)
+        raise SystemExit(1)
+
 
         print(f"\n{Fore.YELLOW}Perform release for modules :\n" + (
             f"\n".join(map(lambda _m: f"- {Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}",
@@ -1351,6 +1364,9 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
             save_modules(modules, _module_by_name)
 
         _modules_to_process = _modules_to_process.union(_modules_to_release)
+
+    else:
+        _modules_to_process = update_modules_versions(_modules, _module_by_name, _release_build=False)
 
     for _module in _modules:
         _process_info[module] = {"status": "WAITING"}
@@ -1442,7 +1458,7 @@ calculate_ranks(modules)
 
 processable_modules = calculate_processable_modules(modules, process_info, module_by_name)
 
-print_dependency_graph_ascii(processable_modules)
+#print_dependency_graph_ascii(processable_modules)
 
 pending_changes = check_module_depenencies(modules, module_by_name)
 if not args.dirty and pending_changes:
