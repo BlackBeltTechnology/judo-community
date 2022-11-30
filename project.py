@@ -485,6 +485,9 @@ class Module(object):
                 #         f"{self.name}")
                 self.version = ver
                 return True
+            if ver:
+                return False
+
         return False
 
     def update_dependency_versions_in_pom(self, write_pom=False):
@@ -557,7 +560,7 @@ class Module(object):
             print(f"{Fore.YELLOW} - Module is in dirty state, stashing")
             _repo.git.stash(["-u", "-m \"[AUTO STASH]\""])
 
-        _updates = _repo.git.fetch(["--no-tags", "--force", "origin"])
+        _updates = _repo.git.fetch(["--force", "origin"])
         _updates = _repo.remotes.origin.fetch()
         for fetch_info in _updates:
             print(f"Tag: {fetch_info.ref} Author: {fetch_info.ref.commit.author} SHA: {fetch_info.ref.commit.hexsha}")
@@ -619,6 +622,7 @@ class Module(object):
         self.branch = _branch_name
         if not self.virtual:
             self.checkout_branch()
+            self.checkout_tags()
 
     def create_branch(self, _branch_name):
         _repo = github.get_repo(self.github)
@@ -657,6 +661,7 @@ class Module(object):
 
         self.branch = _branch_name
         self.checkout_branch()
+        self.checkout_tags()
         prefix = ""
         search = re.search("(JNG-\\d+)", _branch_name)
         if search:
@@ -1392,7 +1397,7 @@ if not args.dirty and pending_changes:
     save_modules(modules, module_by_name)
 
 # =============================== Fetch / Checkout / Reset Git
-if args.git_checkout:
+if args.git_checkout or args.release_build:
     currentDir = os.getcwd()
     repo = git.Repo(currentDir)
     # for _submodule in repo.submodules:
@@ -1416,11 +1421,9 @@ if args.git_checkout:
             # print(f"{Fore.YELLOW}Set branch {Fore.GREEN}{_module.branch}{Fore.YELLOW} for {Fore.GREEN}{_module.name}
             # {Style.RESET_ALL}")
             module.checkout_branch()
+            module.checkout_tags()
 
-if args.fetch_versions:
-    fetch_versions(processable_modules)
-
-if args.integration_build or args.release_build:
+if args.fetch_versions or args.integration_build or args.release_build:
     fetch_versions(processable_modules)
 
 if args.new_feature:
