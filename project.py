@@ -562,8 +562,8 @@ class Module(object):
 
         _updates = _repo.git.fetch(["--force", "origin"])
         _updates = _repo.remotes.origin.fetch()
-        for fetch_info in _updates:
-            print(f"Tag: {fetch_info.ref} Author: {fetch_info.ref.commit.author} SHA: {fetch_info.ref.commit.hexsha}")
+        # for fetch_info in _updates:
+        #     print(f"Tag: {fetch_info.ref} Author: {fetch_info.ref.commit.author} SHA: {fetch_info.ref.commit.hexsha}")
 
         _repo.git.checkout(self.branch)
         _repo.head.reset(index=True, working_tree=True)
@@ -703,9 +703,18 @@ class Module(object):
                 print(f"{Fore.RED} Error in {self.name} - Dependency: {_dep.name} not in master branch, "
                       f"instead of: {_dep.branch}")
                 raise SystemExit(1)
-        self.branch = "master"
+
+        print(f"[RELEASE] {Fore.YELLOW}{self.name}: Create 'perform-release-on-{self.version}'")
         _tag = self.repo().create_tag("perform-release-on-" + self.version, message="[RELEASE] Perform release")
         self.repo().remotes.origin.push(_tag)
+        print(f"[RELEASE]{Fore.YELLOW}{self.name}: Switch branch to 'master'")
+        self.switch_branch("master")
+        print(f"[RELEASE]{Fore.YELLOW}{self.name}: Checkout 'master' branch")
+        self.checkout_branch()
+        print(f"[RELEASE]{Fore.YELLOW}{self.name}: Checkout tags")
+        self.checkout_tags()
+        print(f"[RELEASE]{Fore.YELLOW}{self.name}: Set last release version")
+        self.update_git_tag_versions()
 
 
 def process_module(par, _modules, _module_by_name):
@@ -953,15 +962,15 @@ def start_process_info_server(_modules, _process_info):
     return httpd
 
 
-def update_modules_versions(_modules, _module_by_name, _processing_modules=None, _release_build=False):
+def calculate_modules_to_update(_modules, _module_by_name, _processing_modules=None, _release_build=False):
     if _processing_modules is None:
         _processing_modules = set()
     _updated_modules = set()
-#    for _module in _modules:
-#        if not _module.ignored and not _module.virtual:
-#            # print("Checking dependency update in POM: " + module.name)
-#            if _module.update_dependency_versions_in_pom(False) or (_release_build and _module.branch != "master"):
-#                _updated_modules.add(_module)
+    for _module in _modules:
+        if not _module.ignored and not _module.virtual:
+            # print("Checking dependency update in POM: " + module.name)
+            if _module.update_dependency_versions_in_pom(False) or (_release_build and _module.branch != "master"):
+                _updated_modules.add(_module)
 
     # Removing modules which have dependency on current modules
     _removable_modules = set()
@@ -970,6 +979,11 @@ def update_modules_versions(_modules, _module_by_name, _processing_modules=None,
             ancestors(calculate_graph(_modules), _module)))
 
     _updated_modules = _updated_modules.difference(_removable_modules)
+    return _updated_modules
+
+
+def update_modules_versions(_modules, _module_by_name, _processing_modules=None, _release_build=False):
+    _updated_modules = calculate_modules_to_update(_modules, _module_by_name, _release_build=_release_build)
 
     print(f"\n{Fore.RED}Versions updated for modules :\n" + (
         f"\n".join(map(lambda _m: f"{Fore.GREEN}-{_m.name} ({_m.rank}){Style.RESET_ALL}",
@@ -1287,25 +1301,47 @@ def build_snapshot(_modules, _process_info, _module_by_name):
         _process_info[_module] = {"status": "OK"}
 
 
+def check_release_modules_for_error(_modules):
+    _error = False
+    for _module in _modules:
+        _wrong_dependencies = list(filter(lambda _dep_module: _dep_module.branch != "master", _module.dependencies))
+        if len(_wrong_dependencies) > 0:
+            for _wrong_dependency in _wrong_dependencies:
+                print(f"\n{Fore.RED}Dependency {_wrong_dependency.name} is not in 'master' for {_module.name}\n")
+                _error = True
+
+        if "perform-release-on-" + _module.version in _module.get_remote_tags().keys():
+            print(f"\n{Fore.RED}Tag 'perform-release-on-{_module.version}' already set for  {_module.name}\n")
+            _error = True
+
+    return _error
+
+
 def build_continuous(_modules, _process_info, _module_by_name, _release_build=False):
     print(f"\n{Fore.YELLOW}Continuous build for modules :\n" + (
         f"\n".join(map(lambda _m: f"- {Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}",
                        _modules))) + f"{Style.RESET_ALL}\n")
 
-    _modules_to_process = update_modules_versions(_modules, _module_by_name, _release_build=_release_build)
+    _modules_to_process = update_modules_versions(_modules, _module_by_name, _release_build=False)
 
-    # if _release_build:
-    #    for _module in _modules_to_process:
-    #        _module.perform_release()
+    if _release_build:
+        _modules_to_release = calculate_modules_to_update(_modules, _module_by_name, _release_build=True).difference(_modules_to_process)
+        _wrong_dependency = []
 
-    #     _modules_to_release_in_first = _modules.difference(_modules_to_process)
-    #     _modules_to_release = filter(lambda _module: _module == "develop" and not _module.ignored and len(list(
-    #         filter(lambda _dep_module: _dep_module.branch != "master", _module.dependencies))) == 0,
-    #                                  _modules_to_release_in_first)
-    #     for _module in _modules_to_release:
-    #         _module.perform_release()
-    #
-    #     _modules_to_process.union(_modules_to_release)
+        print(f"\n{Fore.YELLOW}Perform release for modules :\n" + (
+            f"\n".join(map(lambda _m: f"- {Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}",
+                           _modules))) + f"{Style.RESET_ALL}\n")
+
+        if check_release_modules_for_error(_modules_to_release):
+            raise SystemExit(1)
+
+        # Check tag already exists
+        for _module in _modules_to_release:
+            _module.perform_release()
+        if not args.dirty:
+            save_modules(modules, _module_by_name)
+
+        _modules_to_process = _modules_to_process.union(_modules_to_release)
 
     for _module in _modules:
         _process_info[module] = {"status": "WAITING"}
@@ -1324,17 +1360,24 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
                 print("  NEW Version, it removed from wait list")
                 _process_info[_module] = {"status": "OK"}
                 if _release_build and _module.branch == "develop":
+                    if check_release_modules_for_error([_module]):
+                        raise SystemExit(1)
                     _module.perform_release()
                 elif _release_build and _module.branch == "master":
-                    _removable_modules.add(_module)
+                    print(f"[RELEASE]{Fore.YELLOW}{_module.name}: Checkout 'master' branch")
+                    _module.checkout_branch()
                     _module.ignored = True
+                    _removable_modules.add(_module)
+                    if not args.dirty:
+                        save_modules(modules, _module_by_name)
                 else:
                     _removable_modules.add(_module)
 
         if len(_removable_modules) > 0:
             _modules_to_process = _modules_to_process.difference(_removable_modules)
             _new_modules_to_process = update_modules_versions(_modules, _module_by_name,
-                                                              _processing_modules=_modules_to_process, _release_build=_release_build)
+                                                              _processing_modules=_modules_to_process,
+                                                              _release_build=_release_build)
             for _new_module in _new_modules_to_process.union(_modules_to_process):
                 _removable_modules = _removable_modules.union(set(
                     ancestors(calculate_graph(_modules), _new_module)))
@@ -1397,7 +1440,7 @@ if not args.dirty and pending_changes:
     save_modules(modules, module_by_name)
 
 # =============================== Fetch / Checkout / Reset Git
-if args.git_checkout or args.release_build:
+if args.git_checkout: # or args.release_build:
     currentDir = os.getcwd()
     repo = git.Repo(currentDir)
     # for _submodule in repo.submodules:
@@ -1423,7 +1466,7 @@ if args.git_checkout or args.release_build:
             module.checkout_branch()
             module.checkout_tags()
 
-if args.fetch_versions or args.integration_build or args.release_build:
+if args.fetch_versions or args.integration_build: # or args.release_build:
     fetch_versions(processable_modules)
 
 if args.new_feature:
@@ -1499,13 +1542,9 @@ if args.run_postchangescripts:
                 module.commit_and_push_changes()
 
 # ================================ Checking for updates
-if args.continuous_update or args.integration_build:
+if args.continuous_update or args.integration_build or args.release_build:
     server_start(processable_modules, process_info)
-    build_continuous(processable_modules, process_info, module_by_name)
-
-if args.release_build:
-    server_start(processable_modules, process_info)
-    build_continuous(processable_modules, process_info, module_by_name, _release_build=True)
+    build_continuous(processable_modules, process_info, module_by_name, _release_build=args.release_build)
 
 if args.relnotes:
     currentDir = os.getcwd()
