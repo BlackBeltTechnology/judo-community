@@ -465,19 +465,16 @@ class Module(object):
             return
         _tags = reversed(sorted(self.get_remote_tags().keys()))
         for _tag in _tags:
+            ver = None
             if self.branch == 'master':
                 if _tag and re.match(r'^v(\d+\.)?(\d+\.)?(\*|\d+)$', _tag):
                     ver = _tag.strip()[1:]  # .encode('ascii', 'ignore')
-                else:
-                    return False
             else:
                 _branch = re.sub(r"[ #,\\\"'/;-]", "_", self.branch)
                 if _tag and re.match(r'^v.*' + _branch + '.*', _tag):
                     ver = _tag.strip()[1:]  # .encode('ascii', 'ignore')
-                else:
-                    return False
 
-            if self.version != ver:
+            if ver and self.version != ver:
                 print(
                     f"{Fore.YELLOW}Updating release version of {Fore.GREEN}{self.name}{Fore.YELLOW}: "
                     f"{Fore.GREEN}{self.version} {Fore.YELLOW}=>{Fore.GREEN} {ver}")
@@ -488,8 +485,6 @@ class Module(object):
                 #         f"{self.name}")
                 self.version = ver
                 return True
-            else:
-                return False
         return False
 
     def update_dependency_versions_in_pom(self, write_pom=False):
@@ -704,7 +699,7 @@ class Module(object):
                       f"instead of: {_dep.branch}")
                 raise SystemExit(1)
         self.branch = "master"
-        _tag = self.repo().create_tag("perform-release-on-" + self.version, "[RELEASE] Perform release")
+        _tag = self.repo().create_tag("perform-release-on-" + self.version, message="[RELEASE] Perform release")
         self.repo().remotes.origin.push(_tag)
 
 
@@ -953,15 +948,15 @@ def start_process_info_server(_modules, _process_info):
     return httpd
 
 
-def update_modules_versions(_modules, _module_by_name, _processing_modules=None):
+def update_modules_versions(_modules, _module_by_name, _processing_modules=None, _release_build=False):
     if _processing_modules is None:
         _processing_modules = set()
     _updated_modules = set()
-    for _module in _modules:
-        if not _module.ignored and not _module.virtual:
-            # print("Checking dependency update in POM: " + module.name)
-            if _module.update_dependency_versions_in_pom(False):
-                _updated_modules.add(_module)
+#    for _module in _modules:
+#        if not _module.ignored and not _module.virtual:
+#            # print("Checking dependency update in POM: " + module.name)
+#            if _module.update_dependency_versions_in_pom(False) or (_release_build and _module.branch != "master"):
+#                _updated_modules.add(_module)
 
     # Removing modules which have dependency on current modules
     _removable_modules = set()
@@ -1292,16 +1287,20 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
         f"\n".join(map(lambda _m: f"- {Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}",
                        _modules))) + f"{Style.RESET_ALL}\n")
 
-    _modules_to_process = update_modules_versions(_modules, _module_by_name, _release_build)
+    _modules_to_process = update_modules_versions(_modules, _module_by_name, _release_build=_release_build)
 
-    if _release_build:
-        _modules_to_release = filter(lambda _module: _module == "develop" and not _module.ignored and len(list(
-            filter(lambda _dep_module: _dep_module.branch != "master", _module.dependencies))) == 0,
-                                     _modules.difference(_modules.difference(_modules_to_process)))
-        for _module in _modules_to_release:
-            _module.perform_release()
+    # if _release_build:
+    #    for _module in _modules_to_process:
+    #        _module.perform_release()
 
-        _modules_to_process.union(_modules_to_release)
+    #     _modules_to_release_in_first = _modules.difference(_modules_to_process)
+    #     _modules_to_release = filter(lambda _module: _module == "develop" and not _module.ignored and len(list(
+    #         filter(lambda _dep_module: _dep_module.branch != "master", _module.dependencies))) == 0,
+    #                                  _modules_to_release_in_first)
+    #     for _module in _modules_to_release:
+    #         _module.perform_release()
+    #
+    #     _modules_to_process.union(_modules_to_release)
 
     for _module in _modules:
         _process_info[module] = {"status": "WAITING"}
@@ -1330,7 +1329,7 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
         if len(_removable_modules) > 0:
             _modules_to_process = _modules_to_process.difference(_removable_modules)
             _new_modules_to_process = update_modules_versions(_modules, _module_by_name,
-                                                              _processing_modules=_modules_to_process)
+                                                              _processing_modules=_modules_to_process, _release_build=_release_build)
             for _new_module in _new_modules_to_process.union(_modules_to_process):
                 _removable_modules = _removable_modules.union(set(
                     ancestors(calculate_graph(_modules), _new_module)))
@@ -1497,7 +1496,7 @@ if args.run_postchangescripts:
                 module.commit_and_push_changes()
 
 # ================================ Checking for updates
-if args.continuous_update or args.integration_build or args.release_build:
+if args.continuous_update or args.integration_build:
     server_start(processable_modules, process_info)
     build_continuous(processable_modules, process_info, module_by_name)
 
