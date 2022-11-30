@@ -1,6 +1,6 @@
 - branch: master
   github: BlackbeltTechnology/epsilon-runtime
-  ignored: true
+  ignored: false
   name: epsilon-runtime
   property: epsilon-runtime-version
   rank: 1
@@ -9,7 +9,7 @@
   virtual: true
 - branch: master
   github: BlackbeltTechnology/epsilon-runtime-eclipse
-  ignored: true
+  ignored: false
   name: epsilon-runtime-eclipse
   property: epsilon-runtime-eclipse-version
   rank: 1
@@ -18,7 +18,7 @@
   virtual: true
 - branch: master
   github: BlackbeltTechnology/emf-genmodel-generator
-  ignored: true
+  ignored: false
   name: emf-genmodel-generator
   property: emf-genmodel-generator-version
   rank: 1
@@ -27,7 +27,7 @@
   virtual: true
 - branch: master
   github: BlackbeltTechnology/judo-genmodel-generator
-  ignored: true
+  ignored: false
   name: judo-genmodel-generator
   property: judo-genmodel-generator-version
   rank: 1
@@ -36,7 +36,7 @@
   virtual: true
 - branch: master
   github: BlackbeltTechnology/judo-epp-common
-  ignored: true
+  ignored: false
   name: judo-epp-common
   property: judo-epp-common-version
   rank: 1
@@ -45,7 +45,7 @@
   virtual: true
 - branch: master
   github: BlackbeltTechnology/osgi-utils
-  ignored: true
+  ignored: false
   name: osgi-utils
   property: osgi-utils-version
   rank: 1
@@ -54,7 +54,7 @@
   virtual: true
 - branch: master
   github: BlackbeltTechnology/java-embedded-compiler
-  ignored: true
+  ignored: false
   name: java-embedded-compiler
   property: java-embedded-compiler-version
   rank: 1
@@ -63,7 +63,7 @@
   virtual: true
 - branch: master
   github: BlackbeltTechnology/structured-map-proxy
-  ignored: true
+  ignored: false
   name: structured-map-proxy
   property: structured-map-proxy-version
   rank: 1
@@ -72,7 +72,7 @@
   virtual: true
 - branch: master
   github: BlackbeltTechnology/karaf-features
-  ignored: true
+  ignored: false
   name: karaf-features
   property: karaf-features-version
   rank: 1
@@ -81,7 +81,7 @@
   virtual: true
 - branch: master
   github: BlackbeltTechnology/mapper
-  ignored: true
+  ignored: false
   name: mapper
   property: mapper-version
   rank: 1
@@ -90,7 +90,7 @@
   virtual: true
 - branch: master
   github: BlackbeltTechnology/osgi-liquibase
-  ignored: true
+  ignored: false
   name: osgi-liquibase
   property: osgi-liquibase-version
   rank: 1
@@ -99,7 +99,7 @@
   virtual: true
 - branch: master
   github: BlackbeltTechnology/osgi-filestore
-  ignored: true
+  ignored: false
   name: osgi-filestore
   property: osgi-filestore-version
   rank: 1
@@ -108,7 +108,7 @@
   virtual: true
 - branch: master
   github: BlackbeltTechnology/judo-misc-p2
-  ignored: true
+  ignored: false
   name: judo-misc-p2
   p2:
     localsite: /target/repository
@@ -120,7 +120,7 @@
   virtual: false
 - branch: master
   github: BlackbeltTechnology/judo-dao-api
-  ignored: true
+  ignored: false
   name: judo-dao-api
   path: judo-dao-api
   property: judo-dao-api-version
@@ -130,7 +130,7 @@
   virtual: false
 - branch: master
   github: BlackbeltTechnology/judo-dispatcher-api
-  ignored: true
+  ignored: false
   name: judo-dispatcher-api
   path: judo-dispatcher-api
   property: judo-dispatcher-api-version
@@ -142,7 +142,7 @@
   dependencies:
   - judo-meta-jsl
   github: BlackbeltTechnology/judo-jsl-vscode
-  ignored: true
+  ignored: false
   name: judo-jsl-vscode
   path: judo-jsl-vscode
   property: judo-jsl-vscode-version
@@ -165,7 +165,7 @@
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-asm
-  ignored: true
+  ignored: false
   name: judo-meta-asm
   p2:
     localsite: /site/target/repository
@@ -206,7 +206,7 @@
   property: judo-meta-expression-version
   rank: 3
   url: git@github.com:BlackbeltTechnology/judo-meta-expression.git
-  version: 1.0.3
+  version: 1.0.4.20221130_094028_31748ef8_develop
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
@@ -236,7 +236,7 @@
   property: judo-meta-expression-asm-version
   rank: 4
   url: git@github.com:BlackbeltTechnology/judo-meta-expression-asm.git
-  version: 1.0.2
+  version: 1.0.4.20221130_101802_bb295c7a_develop
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
@@ -266,7 +266,7 @@
   property: judo-meta-expression-psm-version
   rank: 4
   url: git@github.com:BlackbeltTechnology/judo-meta-expression-psm.git
-  version: 1.0.2
+  version: 1.0.4.20221130_103045_38c817c3_develop
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
@@ -281,7 +281,7 @@
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-psm-jql
-  ignored: true
+  ignored: false
   name: judo-meta-jql
   p2:
     localsite: /site/target/repository
@@ -308,7 +308,7 @@
   - judo-epp-common
   - judo-misc-p2
   github: BlackbeltTechnology/judo-meta-jsl
-  ignored: true
+  ignored: false
   name: judo-meta-jsl
   p2:
     localsite: /site/target/repository
@@ -336,7 +336,7 @@
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-liquibase
-  ignored: true
+  ignored: false
   name: judo-meta-liquibase
   p2:
     localsite: /site/target/repository
@@ -364,7 +364,7 @@
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-measure
-  ignored: true
+  ignored: false
   name: judo-meta-measure
   p2:
     localsite: /site/target/repository
@@ -392,7 +392,7 @@
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-psm
-  ignored: true
+  ignored: false
   name: judo-meta-psm
   p2:
     localsite: /site/target/repository
@@ -420,7 +420,7 @@
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-query
-  ignored: true
+  ignored: false
   name: judo-meta-query
   p2:
     localsite: /site/target/repository
@@ -448,7 +448,7 @@
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-rdbms
-  ignored: true
+  ignored: false
   name: judo-meta-rdbms
   p2:
     localsite: /site/target/repository
@@ -469,7 +469,7 @@
   - judo-dispatcher-api
   - judo-meta-asm
   github: BlackbeltTechnology/judo-operation-utils
-  ignored: true
+  ignored: false
   name: judo-operation-utils
   path: judo-operation-utils
   property: judo-operation-utils-version
@@ -526,7 +526,7 @@
   - judo-dao-api
   - structured-map-proxy
   github: BlackbeltTechnology/judo-sdk-common
-  ignored: true
+  ignored: false
   name: judo-sdk-common
   path: judo-sdk-common
   property: judo-sdk-common-version
@@ -573,7 +573,7 @@
   property: judo-tatami-core-version
   rank: 2
   url: git@github.com:BlackbeltTechnology/judo-tatami-core.git
-  version: 1.1.2
+  version: 1.1.3
   virtual: false
 - branch: develop
   dependencies:

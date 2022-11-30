@@ -1322,6 +1322,15 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
         f"\n".join(map(lambda _m: f"- {Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}",
                        _modules))) + f"{Style.RESET_ALL}\n")
 
+    for _module in calculate_modules_to_update(_modules, _module_by_name, _release_build=_release_build):
+        _error = False
+        if _module.update_dependency_versions_in_pom(False) and _module.branch == "master":
+            print(f"\n{Fore.RED}There is some update in dependency versions and {_module} branch is 'master'. "
+                  f"Please switch to develop or set it ignored.\n")
+            _error = True
+        if _error:
+            raise SystemExit(1)
+
     _modules_to_process = update_modules_versions(_modules, _module_by_name, _release_build=False)
 
     if _release_build:
