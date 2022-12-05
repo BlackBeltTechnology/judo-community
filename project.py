@@ -232,6 +232,9 @@ general_arg_group.add_argument("-ib", "--integration_build", action="store_true"
 general_arg_group.add_argument("-rb", "--release_build", action="store_true", dest="release_build",
                                default=False,
                                help='Continuous integration build. (same as -fv -pu -up -cu)')
+general_arg_group.add_argument("-fd", "--fix-dependencies", action="store_true", dest="fix_dependencies",
+                               default=False,
+                               help='Add pom.xml defined dependencies to project-meta.yml')
 general_arg_group.add_argument("-cu", "--continuous", action="store_true", dest="continuous_update", default=False,
                                help='Continuously update / fetch / wait until last level')
 general_arg_group.add_argument("-sm", "--start-modules", action="store", dest="start_modules", default=None,
@@ -269,6 +272,9 @@ github_arg_group = parser.add_argument_group('GitHub API control arguments')
 github_arg_group.add_argument("-fv", "--fetchversions", action="store_true", dest="fetch_versions",
                               default=False,
                               help='Fetch last released versions from github')
+github_arg_group.add_argument("-fva", "--fetchversions_all", action="store_true", dest="fetch_versions_all",
+                              default=False,
+                              help='Fetch last released versions from github for all modules')
 github_arg_group.add_argument("-nf", "--newfeature", action="store", dest="new_feature",
                               metavar='branch message', nargs='+',
                               help='Create feature branch and pull request. (same as -cbr and -cpr). '
@@ -427,68 +433,59 @@ class Module(object):
             dependencies.append(dependency.name)
         self.dependencies = dependencies
 
+    def get_version_from_branch_and_tag(self, _tag):
+        _ver = None
+        if self.branch == 'master':
+            if _tag and re.match(r'^v(\d+\.)?(\d+\.)?(\*|\d+)$', _tag):
+                _ver = _tag.strip()[1:]  # .encode('ascii', 'ignore')
+        else:
+            _branch = re.sub(r"[ #,\\\"'/;-]", "_", self.branch)
+            if _tag and re.match(r'^v.*' + _branch + '.*', _tag):
+                _ver = _tag.strip()[1:]  # .encode('ascii', 'ignore')
+        return _ver
+
+    def update_version_with_given_version(self, _ver):
+        if _ver and self.version != _ver:
+            print(
+                f"{Fore.YELLOW}Updating release version of {Fore.GREEN}{self.name}{Fore.YELLOW}: "
+                f"{Fore.GREEN}{self.version} {Fore.YELLOW}=>{Fore.GREEN} {_ver}")
+            # if version.parse(ver) < version.parse(self.version):
+            #     raise SystemExit(
+            #         f"{Fore.RED}{version.parse(ver)} in properties smaller than {version.parse(self.version)} on
+            #         project-meta.yml: "
+            #         f"{self.name}")
+            self.version = _ver
+            return True
+
+        return False
+
     def update_github_versions(self):
         if self.ignored:
-            return
+            return False
         # repository = github.get_organization(par['github'].split("/")[0]).get_repo(par['github'].split("/")[1])
         repository = github.get_repo(self.github)
         for _tag in repository.get_tags():
-            if self.branch == 'master':
-                if _tag.name and re.match(r'^v(\d+\.)?(\d+\.)?(\*|\d+)$', _tag.name):
-                    ver = tag.name.strip()[1:]  # .encode('ascii', 'ignore')
-                else:
-                    return False
-            else:
-                _branch = re.sub(r"[ #,\\\"'/;-]", "_", self.branch)
-                if _tag.name and re.match(r'^v.*' + _branch + '.*', _tag.name):
-                    ver = _tag.name.strip()[1:]  # .encode('ascii', 'ignore')
-                else:
-                    return False
-
-            if self.version != ver:
-                print(
-                    f"{Fore.YELLOW}Updating release version of {Fore.GREEN}{self.name}{Fore.YELLOW}: "
-                    f"{Fore.GREEN}{self.version} {Fore.YELLOW}=>{Fore.GREEN} {ver}")
-                # if version.parse(ver) < version.parse(self.version):
-                #     raise SystemExit(
-                #         f"{Fore.RED}{version.parse(ver)} in properties smaller than {version.parse(self.version)} on
-                #         project-meta.yml: "
-                #         f"{self.name}")
-                self.version = ver
+            _ver = self.get_version_from_branch_and_tag(_tag.name)
+            print(f"Checking tag: {_tag.name} - Ver: {_ver}")
+            if self.update_version_with_given_version(_ver):
                 return True
-            else:
+            if _ver:
                 return False
         return False
 
     def update_git_tag_versions(self):
         if self.ignored:
-            return
+            return False
         _tags = reversed(sorted(self.get_remote_tags().keys()))
         for _tag in _tags:
-            ver = None
-            if self.branch == 'master':
-                if _tag and re.match(r'^v(\d+\.)?(\d+\.)?(\*|\d+)$', _tag):
-                    ver = _tag.strip()[1:]  # .encode('ascii', 'ignore')
-            else:
-                _branch = re.sub(r"[ #,\\\"'/;-]", "_", self.branch)
-                if _tag and re.match(r'^v.*' + _branch + '.*', _tag):
-                    ver = _tag.strip()[1:]  # .encode('ascii', 'ignore')
-
-            if ver and self.version != ver:
-                print(
-                    f"{Fore.YELLOW}Updating release version of {Fore.GREEN}{self.name}{Fore.YELLOW}: "
-                    f"{Fore.GREEN}{self.version} {Fore.YELLOW}=>{Fore.GREEN} {ver}")
-                # if version.parse(ver) < version.parse(self.version):
-                #     raise SystemExit(
-                #         f"{Fore.RED}{version.parse(ver)} in properties smaller than {version.parse(self.version)} on
-                #         project-meta.yml: "
-                #         f"{self.name}")
-                self.version = ver
-                return True
-            if ver:
-                return False
-
-        return False
+            _ver = self.get_version_from_branch_and_tag(_tag)
+            print(f"Checking tag: {_tag} - Ver: {_ver}")
+            if _ver and self.version != _ver:
+                if self.update_version_with_given_version(_ver):
+                    return True
+                if _ver:
+                    return False
+            return False
 
     def update_dependency_versions_in_pom(self, write_pom=False):
         if self.path is None:
@@ -518,6 +515,8 @@ class Module(object):
                 #     raise SystemExit(f"{Fore.RED}{version.parse(dependency.version)} in properties smaller than
                 #     {version.parse(ref_prop_element.text)} on pom.xml: "
                 #                      f"{self.name}")
+                print(f" ---> Dependency update: {dependency.name} {ref_prop_element.text} -> {dependency.version}")
+
                 ref_prop_element.text = dependency.version
                 update = True
         # print(pom)
@@ -714,7 +713,26 @@ class Module(object):
         print(f"[RELEASE]{Fore.YELLOW}{self.name}: Checkout tags")
         self.checkout_tags()
         print(f"[RELEASE]{Fore.YELLOW}{self.name}: Set last release version")
-        self.update_git_tag_versions()
+        # self.update_git_tag_versions()
+        self.update_github_versions()
+
+    def switch_to_develop(self):
+        print(f"[RELEASE]{Fore.YELLOW}{self.name}: Switch branch to 'develop'")
+        self.switch_branch("develop")
+        print(f"[RELEASE]{Fore.YELLOW}{self.name}: Checkout 'develop' branch")
+        self.checkout_branch()
+        print(f"[RELEASE]{Fore.YELLOW}{self.name}: Checkout tags")
+        self.checkout_tags()
+        print(f"[RELEASE]{Fore.YELLOW}{self.name}: Set last release version")
+        # self.update_git_tag_versions()
+        self.update_github_versions()
+
+        # Check all dependency is in master branch
+        for _dep in self.dependencies:
+            if _dep.branch != "master":
+                print(f"{Fore.RED} Error in {self.name} - Dependency: {_dep.name} not in master branch, "
+                      f"instead of: {_dep.branch}")
+                raise SystemExit(1)
 
 
 def process_module(par, _modules, _module_by_name):
@@ -834,7 +852,7 @@ def save_modules(_modules, _module_by_name):
         _module.resolve_dependencies(_module_by_name)
 
 
-def check_module_depenencies(_modules, _module_by_name):
+def check_module_depenencies(_modules, _module_by_name, _fix_dependencies=False):
     _errors = []
     _pending_changes = False
     for _module in _modules:
@@ -847,8 +865,9 @@ def check_module_depenencies(_modules, _module_by_name):
                               f"{Fore.GREEN}{_module_to_check.name}{Fore.YELLOW} in dependencies, but "
                               f"{Fore.GREEN}{_module.path}/pom.xml{Fore.YELLOW} have "
                               f"{Fore.GREEN}{_module_to_check.property}")
-                        _module.dependencies.append(_module_to_check)
-                        _pending_changes = True
+                        if _fix_dependencies:
+                            _module.dependencies.append(_module_to_check)
+                            _pending_changes = True
                 else:
                     if _module_to_check in _module.dependencies:
                         _errors.append(f"{Fore.RED}{_module.name} - Property definition "
@@ -913,7 +932,7 @@ def get_request_handler(_modules, _process_info):
 
             for _module in _modules:
                 for dependency in _module.dependencies:
-                    if dependency in _modules:
+                    if dependency in _modules and dependency in _process_info.keys:
                         _g.add_edge(_module, dependency)
 
             _g = transitive_reduction(_g)
@@ -924,12 +943,14 @@ def get_request_handler(_modules, _process_info):
                 _g.nodes[node]['style'] = 'filled'
                 if _process_info.get(node, {"status": "UNKNOWN"}).get("status") == "UNKNOWN":
                     _g.nodes[node]['fillcolor'] = 'wheat'
+                if _process_info.get(node, {"status": "WAITING"}).get("status") == "WAITING":
+                    _g.nodes[node]['fillcolor'] = 'skyblue'
                 if _process_info.get(node, {"status": ""}).get("status") == "RUNNING":
                     _g.nodes[node]['fillcolor'] = "yellow"
                 if _process_info.get(node, {"status": ""}).get("status") == "OK":
                     _g.nodes[node]['fillcolor'] = "green"
-                if _process_info.get(node, {"status": ""}).get("status") == "SKIPPED":
-                    _g.nodes[node]['fillcolor'] = "darkseagreen2"
+                if _process_info.get(node, {"status": ""}).get("status") == "IDLE":
+                    _g.nodes[node]['fillcolor'] = "lightslategrey"
 
             svg = to_pydot(_g).create_svg().decode("utf-8")
 
@@ -962,21 +983,28 @@ def start_process_info_server(_modules, _process_info):
     return httpd
 
 
-def calculate_modules_to_update(_modules, _module_by_name, _processing_modules=None, _release_build=False):
-    if _processing_modules is None:
-        _processing_modules = set()
+def calculate_modules_to_update(_modules, _module_by_name, _active_processes=None, _release_build=False,
+                                _already_processed_modules=None):
+    if _active_processes is None:
+        _active_processes = set()
+    if _already_processed_modules is None:
+        _already_processed_modules = set()
+
     _updated_modules = set()
     for _module in _modules:
-        if not _module.ignored and not _module.virtual:
+        if not _module.ignored and not _module.virtual and _module not in _already_processed_modules:
             # print("Checking dependency update in POM: " + module.name)
-            if _module.update_dependency_versions_in_pom(False) or (_release_build and _module.branch != "master" and
+            _master_build_only = False
+            if _release_build and _module.branch != "master":
+                _master_build_only = len(list(filter(lambda _dep_module: _dep_module.branch != 'master',
+                                                     _module.dependencies))) == 0
 
-                ):
+            if _module.update_dependency_versions_in_pom(False) or _master_build_only:
                 _updated_modules.add(_module)
 
     # Removing modules which have dependency on current modules
     _removable_modules = set()
-    for _module in _updated_modules.union(_processing_modules):
+    for _module in _updated_modules.union(_active_processes):
         _removable_modules = _removable_modules.union(set(
             ancestors(calculate_graph(_modules), _module)))
 
@@ -984,8 +1012,11 @@ def calculate_modules_to_update(_modules, _module_by_name, _processing_modules=N
     return _updated_modules
 
 
-def update_modules_versions(_modules, _module_by_name, _processing_modules=None, _release_build=False):
-    _updated_modules = calculate_modules_to_update(_modules, _module_by_name, _release_build=_release_build)
+def update_modules_versions_and_push(_modules, _module_by_name, _active_processes=None, _already_processed_modules=None):
+    _updated_modules = calculate_modules_to_update(_modules, _module_by_name,
+                                                   _active_processes=_active_processes,
+                                                   _release_build=False,
+                                                   _already_processed_modules=_already_processed_modules)
 
     print(f"\n{Fore.RED}Versions updated for modules :\n" + (
         f"\n".join(map(lambda _m: f"{Fore.GREEN}-{_m.name} ({_m.rank}){Style.RESET_ALL}",
@@ -1001,8 +1032,8 @@ def update_modules_versions(_modules, _module_by_name, _processing_modules=None,
             if not _module.call_postchangescripts():
                 print(f"\n{Fore.RED}Error when calling post change script on {_module.name}.")
                 if not args.dirty:
-                    save_modules(_modules, _module_by_name)
-                exit(1)
+                    save_modules(modules, _module_by_name)
+                raise SystemExit(1)
         if args.push_updates or args.integration_build or args.release_build:
             print("Pushing updates to " + _module.name)
             _module.commit_and_push_changes()
@@ -1011,13 +1042,18 @@ def update_modules_versions(_modules, _module_by_name, _processing_modules=None,
 
 # =============================== Initial version fetching
 
-def fetch_versions(_modules):
+def fetch_versions(_modules, _fetch_ignored=False):
     for _module in _modules:
-        if not _module.ignored:
+        if not _module.ignored or _fetch_ignored:
             print(
                 f"{Fore.YELLOW}Checking latest release for {Fore.GREEN}{_module.name}{Fore.YELLOW} in branch: "
                 f"{Fore.GREEN}{_module.branch}")
-            _module.update_git_tag_versions()
+            if _fetch_ignored:
+                # TODO: Virtual modules does not have git representation, so fetching is not possible
+                _module.update_github_versions()
+            else:
+                # _module.update_git_tag_versions()
+                _module.update_github_versions()
 
 
 def current_snapshot_version(_module):
@@ -1339,55 +1375,81 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
         raise SystemExit(1)
 
     if _release_build:
-        _candidate_modules = filter(lambda _module:
-                                    len(list(
-                                        filter(lambda _dep_module: _dep_module.branch != 'master',
-                                               _module.dependencies))) == 0,
-                                    update_modules_versions(_modules, _module_by_name, _release_build=False))
+        # Collecting modules in 'develop' which has master dependencies only
+        # _candidate_modules = filter(lambda _module:
+        #                             len(list(
+        #                                 filter(lambda _dep_module: _dep_module.branch != 'master',
+        #                                        _module.dependencies))) == 0,
+        #                             calculate_modules_to_update(_modules, _module_by_name, _release_build=False))
 
-        _modules_to_release = calculate_modules_to_update(_modules, _module_by_name, _release_build=True)\
-            .difference(_candidate_modules)
-        raise SystemExit(1)
+        # _modules_to_build = calculate_modules_to_update(_modules, _module_by_name, _release_build=True)
 
+        # Collect changed modules and modules which in 'develop' branch but all versions are master
+        _candidate_modules = calculate_modules_to_update(_modules, _module_by_name, _release_build=True)
 
-        print(f"\n{Fore.YELLOW}Perform release for modules :\n" + (
-            f"\n".join(map(lambda _m: f"- {Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}",
-                           _modules))) + f"{Style.RESET_ALL}\n")
+        # raise SystemExit(1)
 
-        if check_release_modules_for_error(_modules_to_release):
+        print(f"\n{Fore.YELLOW}Plan to release modules :\n" +
+              (f"\n".join(map(lambda _m: f"- {Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}", _modules)))
+              + f"{Style.RESET_ALL}\n")
+
+        print(f"\n{Fore.YELLOW}Starting with modules :\n" +
+              (f"\n".join(map(lambda _m: f"- {Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}", _candidate_modules)))
+              + f"{Style.RESET_ALL}\n")
+
+        if check_release_modules_for_error(_candidate_modules):
+            raise SystemExit(1)
+
+        _modules_to_process = update_modules_versions_and_push(_modules, _module_by_name)
+
+        # Collect modules which is in 'develop' branch and only master dependencies are defined, because commit
+        # will not be performed, but have to tag
+        _modules_to_perform_release = _candidate_modules.difference(_modules_to_process)
+
+        if check_release_modules_for_error(_modules_to_perform_release):
             raise SystemExit(1)
 
         # Check tag already exists
-        for _module in _modules_to_release:
+        for _module in _modules_to_perform_release:
             _module.perform_release()
         if not args.dirty:
             save_modules(modules, _module_by_name)
 
-        _modules_to_process = _modules_to_process.union(_modules_to_release)
+#        _modules_to_process = _modules_to_process.union(_modules_to_release)
+#        raise SystemExit(1)
+#        _modules_to_process = update_modules_versions(_modules, _module_by_name, _release_build=False)
+        _active_processes = _modules_to_process.union(_modules_to_perform_release)
 
     else:
-        _modules_to_process = update_modules_versions(_modules, _module_by_name, _release_build=False)
+        _active_processes = update_modules_versions_and_push(_modules, _module_by_name)
+
+    # raise SystemExit(1)
 
     for _module in _modules:
         _process_info[module] = {"status": "WAITING"}
 
-    while len(_modules_to_process) > 0:
+    _already_processed_modules = []
+    while len(_active_processes) > 0:
         # wait_for_modules_to_release(process_info, current_updated_dependency_in_modules)
         time.sleep(15)
         _removable_modules = set()
-        for _module in _modules_to_process:
+        for _module in _active_processes:
 
             _process_info[_module] = {"status": "RUNNING"}
             print(
                 f"{Fore.YELLOW}Checking latest release for {Fore.GREEN}{_module.name}{Fore.YELLOW} in branch: "
                 f"{Fore.GREEN}{_module.branch}")
-            if _module.update_git_tag_versions():
+            if _module.update_github_versions():
                 print("  NEW Version, it removed from wait list")
                 _process_info[_module] = {"status": "OK"}
                 if _release_build and _module.branch == "develop":
                     if check_release_modules_for_error([_module]):
+                        if not args.dirty:
+                            save_modules(modules, _module_by_name)
                         raise SystemExit(1)
                     _module.perform_release()
+                    if not args.dirty:
+                        save_modules(modules, _module_by_name)
                 elif _release_build and _module.branch == "master":
                     print(f"[RELEASE]{Fore.YELLOW}{_module.name}: Checkout 'master' branch")
                     _module.checkout_branch()
@@ -1399,20 +1461,39 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
                     _removable_modules.add(_module)
 
         if len(_removable_modules) > 0:
-            _modules_to_process = _modules_to_process.difference(_removable_modules)
-            _new_modules_to_process = update_modules_versions(_modules, _module_by_name,
-                                                              _processing_modules=_modules_to_process,
-                                                              _release_build=_release_build)
-            for _new_module in _new_modules_to_process.union(_modules_to_process):
+            _active_processes = _active_processes.difference(_removable_modules)
+            _already_processed_modules = _already_processed_modules.union(_removable_modules)
+
+            _new_modules_candidates = calculate_modules_to_update(_modules, _module_by_name,
+                                                                  _active_processes=_active_processes,
+                                                                  _already_processed_modules=_already_processed_modules)
+
+            if _release_build:
+                for _module in _new_modules_candidates:
+                    if _module.branch == 'master':
+                        _module.switch_to_develop()
+                    else:
+                        if check_release_modules_for_error([_module]):
+                            if not args.dirty:
+                                save_modules(modules, _module_by_name)
+                            raise SystemExit(1)
+                        _module.perform_release()
+
+            _new_modules_to_process = update_modules_versions_and_push(_modules, _module_by_name,
+                                                                       _active_processes=_active_processes,
+                                                                       _already_processed_modules=
+                                                                       _already_processed_modules)
+
+            for _new_module in _new_modules_to_process.union(_active_processes):
                 _removable_modules = _removable_modules.union(set(
                     ancestors(calculate_graph(_modules), _new_module)))
 
-            _new_modules_to_process = _new_modules_to_process.union(_modules_to_process)
-            _modules_to_process = _new_modules_to_process.difference(_removable_modules)
+            _new_modules_to_process = _new_modules_to_process.union(_active_processes)
+            _active_processes = _new_modules_to_process.difference(_removable_modules)
 
             print(f"\n{Fore.YELLOW}Waiting for modules :\n" + (
                 f"\n".join(map(lambda _m: f"{Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}",
-                               _modules_to_process))) + f"{Style.RESET_ALL}\n")
+                               _active_processes))) + f"{Style.RESET_ALL}\n")
 
             if not args.dirty:
                 save_modules(modules, _module_by_name)
@@ -1491,8 +1572,11 @@ if args.git_checkout: # or args.release_build:
             module.checkout_branch()
             module.checkout_tags()
 
-if args.fetch_versions or args.integration_build: # or args.release_build:
+if args.fetch_versions or args.integration_build or args.release_build:
     fetch_versions(processable_modules)
+
+if args.fetch_versions_all:
+    fetch_versions(modules, _fetch_ignored=True)
 
 if args.new_feature:
     for module in processable_modules:
@@ -1548,6 +1632,8 @@ if args.build_snapshot:
     # =============================== Start process info server
     atexit.register(server_shutdown)
     server_start(processable_modules, process_info)
+    for module in processable_modules:
+        process_info[module] = {"status": "IDLE"}
     build_snapshot(processable_modules, process_info, module_by_name)
 
 # =============================== Generating Graphviz
@@ -1562,13 +1648,15 @@ if args.run_postchangescripts:
                 print(f"\n{Fore.RED}Error when calling post change script on {module.name}.")
                 if not args.dirty:
                     save_modules(modules, module_by_name)
-                exit(1)
+                raise SystemExit(1)
             if args.push_updates or args.integration_build or args.release_build:
                 module.commit_and_push_changes()
 
 # ================================ Checking for updates
 if args.continuous_update or args.integration_build or args.release_build:
     server_start(processable_modules, process_info)
+    for module in processable_modules:
+        process_info[module] = {"status": "IDLE"}
     build_continuous(processable_modules, process_info, module_by_name, _release_build=args.release_build)
 
 if args.relnotes:
