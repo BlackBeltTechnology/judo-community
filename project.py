@@ -459,7 +459,7 @@ class Module(object):
 
         return False
 
-    def update_github_versions(self):
+    def fetch_github_versions(self):
         if self.ignored:
             return False
         # repository = github.get_organization(par['github'].split("/")[0]).get_repo(par['github'].split("/")[1])
@@ -473,7 +473,7 @@ class Module(object):
                 return False
         return False
 
-    def update_git_tag_versions(self):
+    def fetch_git_tag_versions(self):
         if self.ignored:
             return False
         _tags = reversed(sorted(self.get_remote_tags().keys()))
@@ -714,7 +714,7 @@ class Module(object):
         self.checkout_tags()
         print(f"[RELEASE]{Fore.YELLOW}{self.name}: Set last release version")
         # self.update_git_tag_versions()
-        self.update_github_versions()
+        self.fetch_github_versions()
 
     def switch_to_develop(self):
         print(f"[RELEASE]{Fore.YELLOW}{self.name}: Switch branch to 'develop'")
@@ -725,7 +725,7 @@ class Module(object):
         self.checkout_tags()
         print(f"[RELEASE]{Fore.YELLOW}{self.name}: Set last release version")
         # self.update_git_tag_versions()
-        self.update_github_versions()
+        self.fetch_github_versions()
 
         # Check all dependency is in master branch
         for _dep in self.dependencies:
@@ -932,7 +932,7 @@ def get_request_handler(_modules, _process_info):
 
             for _module in _modules:
                 for dependency in _module.dependencies:
-                    if dependency in _modules and dependency in _process_info.keys:
+                    if dependency in _modules and dependency in _process_info.keys():
                         _g.add_edge(_module, dependency)
 
             _g = transitive_reduction(_g)
@@ -1012,7 +1012,7 @@ def calculate_modules_to_update(_modules, _module_by_name, _active_processes=Non
     return _updated_modules
 
 
-def update_modules_versions_and_push(_modules, _module_by_name, _active_processes=None, _already_processed_modules=None):
+def update_modules_versions_in_pom_and_push(_modules, _module_by_name, _active_processes=None, _already_processed_modules=None):
     _updated_modules = calculate_modules_to_update(_modules, _module_by_name,
                                                    _active_processes=_active_processes,
                                                    _release_build=False,
@@ -1050,10 +1050,10 @@ def fetch_versions(_modules, _fetch_ignored=False):
                 f"{Fore.GREEN}{_module.branch}")
             if _fetch_ignored:
                 # TODO: Virtual modules does not have git representation, so fetching is not possible
-                _module.update_github_versions()
+                _module.fetch_github_versions()
             else:
                 # _module.update_git_tag_versions()
-                _module.update_github_versions()
+                _module.fetch_github_versions()
 
 
 def current_snapshot_version(_module):
@@ -1374,20 +1374,8 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
     if _error:
         raise SystemExit(1)
 
-    if _release_build:
-        # Collecting modules in 'develop' which has master dependencies only
-        # _candidate_modules = filter(lambda _module:
-        #                             len(list(
-        #                                 filter(lambda _dep_module: _dep_module.branch != 'master',
-        #                                        _module.dependencies))) == 0,
-        #                             calculate_modules_to_update(_modules, _module_by_name, _release_build=False))
-
-        # _modules_to_build = calculate_modules_to_update(_modules, _module_by_name, _release_build=True)
-
         # Collect changed modules and modules which in 'develop' branch but all versions are master
         _candidate_modules = calculate_modules_to_update(_modules, _module_by_name, _release_build=True)
-
-        # raise SystemExit(1)
 
         print(f"\n{Fore.YELLOW}Plan to release modules :\n" +
               (f"\n".join(map(lambda _m: f"- {Fore.GREEN}{_m.name} ({_m.rank}){Style.RESET_ALL}", _modules)))
@@ -1400,7 +1388,7 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
         if check_release_modules_for_error(_candidate_modules):
             raise SystemExit(1)
 
-        _modules_to_process = update_modules_versions_and_push(_modules, _module_by_name)
+        _modules_to_process = update_modules_versions_in_pom_and_push(_modules, _module_by_name)
 
         # Collect modules which is in 'develop' branch and only master dependencies are defined, because commit
         # will not be performed, but have to tag
@@ -1415,20 +1403,16 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
         if not args.dirty:
             save_modules(modules, _module_by_name)
 
-#        _modules_to_process = _modules_to_process.union(_modules_to_release)
-#        raise SystemExit(1)
-#        _modules_to_process = update_modules_versions(_modules, _module_by_name, _release_build=False)
         _active_processes = _modules_to_process.union(_modules_to_perform_release)
-
     else:
-        _active_processes = update_modules_versions_and_push(_modules, _module_by_name)
+        _active_processes = update_modules_versions_in_pom_and_push(_modules, _module_by_name)
 
     # raise SystemExit(1)
 
     for _module in _modules:
         _process_info[module] = {"status": "WAITING"}
 
-    _already_processed_modules = []
+    _already_processed_modules = set()
     while len(_active_processes) > 0:
         # wait_for_modules_to_release(process_info, current_updated_dependency_in_modules)
         time.sleep(15)
@@ -1439,7 +1423,7 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
             print(
                 f"{Fore.YELLOW}Checking latest release for {Fore.GREEN}{_module.name}{Fore.YELLOW} in branch: "
                 f"{Fore.GREEN}{_module.branch}")
-            if _module.update_github_versions():
+            if _module.fetch_github_versions():
                 print("  NEW Version, it removed from wait list")
                 _process_info[_module] = {"status": "OK"}
                 if _release_build and _module.branch == "develop":
@@ -1453,7 +1437,7 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
                 elif _release_build and _module.branch == "master":
                     print(f"[RELEASE]{Fore.YELLOW}{_module.name}: Checkout 'master' branch")
                     _module.checkout_branch()
-                    _module.ignored = True
+                    # _module.ignored = True
                     _removable_modules.add(_module)
                     if not args.dirty:
                         save_modules(modules, _module_by_name)
@@ -1479,9 +1463,9 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
                             raise SystemExit(1)
                         _module.perform_release()
 
-            _new_modules_to_process = update_modules_versions_and_push(_modules, _module_by_name,
-                                                                       _active_processes=_active_processes,
-                                                                       _already_processed_modules=
+            _new_modules_to_process = update_modules_versions_in_pom_and_push(_modules, _module_by_name,
+                                                                              _active_processes=_active_processes,
+                                                                              _already_processed_modules=
                                                                        _already_processed_modules)
 
             for _new_module in _new_modules_to_process.union(_active_processes):

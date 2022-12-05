@@ -195,7 +195,7 @@
   - osgi-utils
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-expression
-  ignored: true
+  ignored: false
   name: judo-meta-expression
   p2:
     localsite: /site/target/repository
@@ -236,7 +236,7 @@
   property: judo-meta-expression-asm-version
   rank: 4
   url: git@github.com:BlackbeltTechnology/judo-meta-expression-asm.git
-  version: 1.0.3
+  version: 1.0.4
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
@@ -255,7 +255,7 @@
   - judo-genmodel-generator
   - judo-epp-common
   github: BlackbeltTechnology/judo-meta-expression-psm
-  ignored: true
+  ignored: false
   name: judo-meta-expression-psm
   p2:
     localsite: /site/target/repository
@@ -469,7 +469,7 @@
   - judo-dispatcher-api
   - judo-meta-asm
   github: BlackbeltTechnology/judo-operation-utils
-  ignored: true
+  ignored: false
   name: judo-operation-utils
   path: judo-operation-utils
   property: judo-operation-utils-version
@@ -526,7 +526,7 @@
   - judo-dao-api
   - structured-map-proxy
   github: BlackbeltTechnology/judo-sdk-common
-  ignored: true
+  ignored: false
   name: judo-sdk-common
   path: judo-sdk-common
   property: judo-sdk-common-version
@@ -560,7 +560,7 @@
   property: judo-tatami-base-version
   rank: 5
   url: git@github.com:BlackbeltTechnology/judo-tatami-base.git
-  version: 1.1.3.20221130_231304_d5b009c2_develop
+  version: 1.1.3.20221205_202253_921e97f2_develop
   virtual: false
 - branch: master
   dependencies:
