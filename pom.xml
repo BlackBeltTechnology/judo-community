@@ -106,6 +106,7 @@
         <module>judo-runtime-core</module>
         <module>judo-runtime-core-jsl</module>
         <module>judo-jsl-springboot-parent</module>
+        <module>judo-jsl-springboot-starter</module>
         <module>judo-jsl-springboot-archetype</module>
         <module>judo-jsl-vscode</module>
     </modules>

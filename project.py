@@ -466,7 +466,7 @@ class Module(object):
         repository = github.get_repo(self.github)
         for _tag in repository.get_tags():
             _ver = self.get_version_from_branch_and_tag(_tag.name)
-            print(f"Checking tag: {_tag.name} - Ver: {_ver}")
+            # print(f"Checking tag: {_tag.name} - Ver: {_ver}")
             if self.update_version_with_given_version(_ver):
                 return True
             if _ver:
@@ -479,7 +479,7 @@ class Module(object):
         _tags = reversed(sorted(self.get_remote_tags().keys()))
         for _tag in _tags:
             _ver = self.get_version_from_branch_and_tag(_tag)
-            print(f"Checking tag: {_tag} - Ver: {_ver}")
+            # print(f"Checking tag: {_tag} - Ver: {_ver}")
             if _ver and self.version != _ver:
                 if self.update_version_with_given_version(_ver):
                     return True
@@ -717,15 +717,15 @@ class Module(object):
         self.fetch_github_versions()
 
     def switch_to_develop(self):
-        print(f"[RELEASE]{Fore.YELLOW}{self.name}: Switch branch to 'develop'")
+        print(f"[DEVELOP]{Fore.YELLOW}{self.name}: Switch branch to 'develop'")
         self.switch_branch("develop")
-        print(f"[RELEASE]{Fore.YELLOW}{self.name}: Checkout 'develop' branch")
+        print(f"[DEVELOP]{Fore.YELLOW}{self.name}: Checkout 'develop' branch")
         self.checkout_branch()
-        print(f"[RELEASE]{Fore.YELLOW}{self.name}: Checkout tags")
+        print(f"[DEVELOP]{Fore.YELLOW}{self.name}: Checkout tags")
         self.checkout_tags()
-        print(f"[RELEASE]{Fore.YELLOW}{self.name}: Set last release version")
+        # print(f"[DEVELOP]{Fore.YELLOW}{self.name}: Set last release version")
         # self.update_git_tag_versions()
-        self.fetch_github_versions()
+        # self.fetch_github_versions()
 
         # Check all dependency is in master branch
         for _dep in self.dependencies:
@@ -993,13 +993,14 @@ def calculate_modules_to_update(_modules, _module_by_name, _active_processes=Non
     _updated_modules = set()
     for _module in _modules:
         if not _module.ignored and not _module.virtual and _module not in _already_processed_modules:
-            # print("Checking dependency update in POM: " + module.name)
-            _master_build_only = False
-            if _release_build and _module.branch != "master":
-                _master_build_only = len(list(filter(lambda _dep_module: _dep_module.branch != 'master',
-                                                     _module.dependencies))) == 0
+            # print("Checking dependency update in POM: " + _module.name)
+            if _release_build:
+                _master_deps_only = len(list(filter(lambda _dep_module: _dep_module.branch != 'master',
+                                                 _module.dependencies))) == 0
+                if (_master_deps_only and _module.branch == 'develop') or _module.update_dependency_versions_in_pom(False):
+                    _updated_modules.add(_module)
 
-            if _module.update_dependency_versions_in_pom(False) or _master_build_only:
+            if not _release_build and _module.update_dependency_versions_in_pom(False):
                 _updated_modules.add(_module)
 
     # Removing modules which have dependency on current modules
@@ -1366,7 +1367,8 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
         if _module.branch not in ["master", "develop"]:
             print(f"\n{Fore.RED}To release '{_module.name}' branch have to be 'develop' or 'master'. ")
             _error = True
-        if _module.update_dependency_versions_in_pom(False) and _module.branch == "master":
+
+        if not _release_build and _module.update_dependency_versions_in_pom(False) and _module.branch == "master":
             print(f"\n{Fore.RED}There is some update in dependency versions while '{_module.name}' branch is 'master'. "
                   f"Please switch to develop or set it ignored.\n")
             _error = True
@@ -1374,6 +1376,7 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
     if _error:
         raise SystemExit(1)
 
+    if _release_build:
         # Collect changed modules and modules which in 'develop' branch but all versions are master
         _candidate_modules = calculate_modules_to_update(_modules, _module_by_name, _release_build=True)
 
@@ -1388,6 +1391,10 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
         if check_release_modules_for_error(_candidate_modules):
             raise SystemExit(1)
 
+        for _module in _candidate_modules:
+            if _module.branch == 'master':
+                _module.switch_to_develop()
+
         _modules_to_process = update_modules_versions_in_pom_and_push(_modules, _module_by_name)
 
         # Collect modules which is in 'develop' branch and only master dependencies are defined, because commit
@@ -1395,6 +1402,8 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
         _modules_to_perform_release = _candidate_modules.difference(_modules_to_process)
 
         if check_release_modules_for_error(_modules_to_perform_release):
+            if not args.dirty:
+                save_modules(modules, _module_by_name)
             raise SystemExit(1)
 
         # Check tag already exists
@@ -1410,7 +1419,7 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
     # raise SystemExit(1)
 
     for _module in _modules:
-        _process_info[module] = {"status": "WAITING"}
+        _process_info[_module] = {"status": "WAITING"}
 
     _already_processed_modules = set()
     while len(_active_processes) > 0:
@@ -1424,6 +1433,7 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
                 f"{Fore.YELLOW}Checking latest release for {Fore.GREEN}{_module.name}{Fore.YELLOW} in branch: "
                 f"{Fore.GREEN}{_module.branch}")
             if _module.fetch_github_versions():
+
                 print("  NEW Version, it removed from wait list")
                 _process_info[_module] = {"status": "OK"}
                 if _release_build and _module.branch == "develop":
@@ -1441,6 +1451,7 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
                     _removable_modules.add(_module)
                     if not args.dirty:
                         save_modules(modules, _module_by_name)
+                    print(f"[RELEASE]{Fore.YELLOW}{_module.name}: FINISHED")
                 else:
                     _removable_modules.add(_module)
 
@@ -1456,17 +1467,17 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
                 for _module in _new_modules_candidates:
                     if _module.branch == 'master':
                         _module.switch_to_develop()
-                    else:
-                        if check_release_modules_for_error([_module]):
-                            if not args.dirty:
-                                save_modules(modules, _module_by_name)
-                            raise SystemExit(1)
-                        _module.perform_release()
+                    # else:
+                    #     if check_release_modules_for_error([_module]):
+                    #         if not args.dirty:
+                    #             save_modules(modules, _module_by_name)
+                    #         raise SystemExit(1)
+                    #     _module.perform_release()
 
             _new_modules_to_process = update_modules_versions_in_pom_and_push(_modules, _module_by_name,
                                                                               _active_processes=_active_processes,
                                                                               _already_processed_modules=
-                                                                       _already_processed_modules)
+                                                                              _already_processed_modules)
 
             for _new_module in _new_modules_to_process.union(_active_processes):
                 _removable_modules = _removable_modules.union(set(
