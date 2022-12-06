@@ -1539,10 +1539,6 @@ processable_modules = calculate_processable_modules(modules, process_info, modul
 
 print_dependency_graph_ascii(processable_modules)
 
-pending_changes = check_module_depenencies(modules, module_by_name)
-if not args.dirty and pending_changes:
-    save_modules(modules, module_by_name)
-
 # =============================== Fetch / Checkout / Reset Git
 if args.git_checkout or args.release_build:
     currentDir = os.getcwd()
@@ -1569,6 +1565,10 @@ if args.git_checkout or args.release_build:
             # {Style.RESET_ALL}")
             module.checkout_branch()
             module.checkout_tags()
+
+pending_changes = check_module_depenencies(modules, module_by_name)
+if not args.dirty and pending_changes:
+    save_modules(modules, module_by_name)
 
 if args.fetch_versions or args.integration_build or args.release_build:
     fetch_versions(processable_modules)
