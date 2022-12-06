@@ -4,7 +4,7 @@ Here is defined and described what is the test writing methodology. If you add a
 
 == Create new test case
 
-When you create a test case method, the first thing that you have to do is identifying which requirement(s) want to test. If you identified it, you have to attach this information as an annotation to the test method. See en example:
+When you create a test case method, the first thing that you have to do is that to identify which requirement(s) want to test. If you identified it, you have to attach this information as an annotation to the test method. See en example:
 
 [source,java]
 ----
