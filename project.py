@@ -589,6 +589,9 @@ class Module(object):
         return _repo.is_dirty(untracked_files=True)
 
     def commit_and_push_changes(self):
+        if self.branch == 'master':
+            print(f"{Fore.RED} Commit to 'master' branch not allowed for module {self.name}")
+            raise SystemExit(1)
         _repo = self.repo()
 
         print(f"{Fore.YELLOW}Commit and push: " + _repo.git_dir)
@@ -607,6 +610,10 @@ class Module(object):
         _repo.git.push()
 
     def create_and_push_empty_commit(self, _commit_message):
+        if self.branch == 'master':
+            print(f"{Fore.RED} Commit to 'master' branch not allowed for module {self.name}")
+            raise SystemExit(1)
+
         _repo = self.repo()
 
         print(f"{Fore.YELLOW}Create empty commit and push: " + _repo.git_dir)
