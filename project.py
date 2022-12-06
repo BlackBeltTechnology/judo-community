@@ -1003,8 +1003,9 @@ def calculate_modules_to_update(_modules, _module_by_name, _active_processes=Non
             # print("Checking dependency update in POM: " + _module.name)
             if _release_build:
                 _master_deps_only = len(list(filter(lambda _dep_module: _dep_module.branch != 'master',
-                                                 _module.dependencies))) == 0
-                if (_master_deps_only and _module.branch == 'develop') or _module.update_dependency_versions_in_pom(False):
+                                                    _module.dependencies))) == 0
+                if (_master_deps_only and _module.branch == 'develop') or \
+                        _module.update_dependency_versions_in_pom(False):
                     _updated_modules.add(_module)
 
             if not _release_build and _module.update_dependency_versions_in_pom(False):
@@ -1020,7 +1021,10 @@ def calculate_modules_to_update(_modules, _module_by_name, _active_processes=Non
     return _updated_modules
 
 
-def update_modules_versions_in_pom_and_push(_modules, _module_by_name, _active_processes=None, _already_processed_modules=None):
+def update_modules_versions_in_pom_and_push(_modules,
+                                            _module_by_name,
+                                            _active_processes=None,
+                                            _already_processed_modules=None):
     _updated_modules = calculate_modules_to_update(_modules, _module_by_name,
                                                    _active_processes=_active_processes,
                                                    _release_build=False,
@@ -1423,8 +1427,6 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
     else:
         _active_processes = update_modules_versions_in_pom_and_push(_modules, _module_by_name)
 
-    # raise SystemExit(1)
-
     for _module in _modules:
         _process_info[_module] = {"status": "WAITING"}
 
@@ -1474,17 +1476,11 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
                 for _module in _new_modules_candidates:
                     if _module.branch == 'master':
                         _module.switch_to_develop()
-                    # else:
-                    #     if check_release_modules_for_error([_module]):
-                    #         if not args.dirty:
-                    #             save_modules(modules, _module_by_name)
-                    #         raise SystemExit(1)
-                    #     _module.perform_release()
 
             _new_modules_to_process = update_modules_versions_in_pom_and_push(_modules, _module_by_name,
                                                                               _active_processes=_active_processes,
-                                                                              _already_processed_modules=
-                                                                              _already_processed_modules)
+                                                                              _already_processed_modules
+                                                                              =_already_processed_modules)
 
             for _new_module in _new_modules_to_process.union(_active_processes):
                 _removable_modules = _removable_modules.union(set(
@@ -1541,14 +1537,14 @@ calculate_ranks(modules)
 
 processable_modules = calculate_processable_modules(modules, process_info, module_by_name)
 
-#print_dependency_graph_ascii(processable_modules)
+print_dependency_graph_ascii(processable_modules)
 
 pending_changes = check_module_depenencies(modules, module_by_name)
 if not args.dirty and pending_changes:
     save_modules(modules, module_by_name)
 
 # =============================== Fetch / Checkout / Reset Git
-if args.git_checkout: # or args.release_build:
+if args.git_checkout or args.release_build:
     currentDir = os.getcwd()
     repo = git.Repo(currentDir)
     # for _submodule in repo.submodules:
