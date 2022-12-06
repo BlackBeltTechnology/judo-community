@@ -102,8 +102,14 @@ jobs:
             git config --global user.name "OSS"
             git config --global user.email "oss@blackbelt.hu"
 
-      - name: Run build
-        run: python3 ./project.py -gh ${{ secrets.OSS_PAT }} -fv -us -pu -up -cu
+      - name: Checkout repositories
+        run: python3 ./project.py -gh ${{ secrets.OSS_PAT }} -gc
+
+      - name: Fetch versions
+        run: python3 ./project.py -gh ${{ secrets.OSS_PAT }} -fv
+
+      - name: Run integration build
+        run: python3 ./project.py -gh ${{ secrets.OSS_PAT }} -ib
 
       - name: Create Pull Request for release into current branch
         uses: peter-evans/create-pull-request@v3
