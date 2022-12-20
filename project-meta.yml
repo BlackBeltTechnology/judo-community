@@ -138,9 +138,10 @@
   url: git@github.com:BlackbeltTechnology/judo-dispatcher-api.git
   version: 1.0.2
   virtual: false
-- branch: master
+- branch: feature/JNG-4160_Adding_scopes_add_missing_syntaxis
   dependencies:
   - judo-meta-jsl
+  - judo-jsl-tmbundle
   github: BlackbeltTechnology/judo-jsl-vscode
   ignored: false
   name: judo-jsl-vscode
@@ -667,4 +668,14 @@
   rank: 4
   url: git@github.com:BlackbeltTechnology/judo-psm-generator-sdk-core.git
   version: 1.0.0.20221220_000910_6ae05a93_develop
+  virtual: false
+- branch: feature/JNG-4160_Adding_scopes_add_missing_syntaxis
+  github: BlackbeltTechnology/judo-jsl-tmbundle
+  ignored: false
+  name: judo-jsl-tmbundle
+  path: judo-jsl-tmbundle
+  property: judo-jsl-tmbundle-version
+  rank: 1
+  url: git@github.com:BlackbeltTechnology/judo-jsl-tmbundle.git
+  version: 1.0.0.20221220_095948_82d05ab3_feature_JNG_4160_Adding_scopes_add_missing_syntaxis
   virtual: false
