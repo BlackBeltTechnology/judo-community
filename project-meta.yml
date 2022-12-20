@@ -642,10 +642,11 @@
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-archetype.git
   version: 1.0.6.20221219_080235_d4e2ac6a_develop
   virtual: false
-- branch: develop
+- branch: feature/JNG-4327_AutoscanTemplateHelpers
   dependencies:
   - judo-meta-psm
   - epsilon-runtime
+  - judo-generator-commons
   github: BlackbeltTechnology/judo-psm-generator
   ignored: false
   name: judo-psm-generator
@@ -653,12 +654,13 @@
   property: judo-psm-generator-version
   rank: 3
   url: git@github.com:BlackbeltTechnology/judo-psm-generator.git
-  version: 1.0.0.20221216_232045_11537782_develop
+  version: 1.0.0.20221220_011244_d4d44280_feature_JNG_4327_AutoscanTemplateHelpers
   virtual: false
-- branch: develop
+- branch: feature/JNG-4327_AutoscanTemplateHelpers
   dependencies:
   - judo-psm-generator
   - judo-meta-psm
+  - judo-generator-commons
   github: BlackbeltTechnology/judo-psm-generator-sdk-core
   ignored: false
   name: judo-psm-generator-sdk-core
@@ -666,5 +668,15 @@
   property: judo-psm-generator-sdk-core-version
   rank: 4
   url: git@github.com:BlackbeltTechnology/judo-psm-generator-sdk-core.git
-  version: 1.0.0.20221220_000910_6ae05a93_develop
+  version: 1.0.0.20221220_012022_a0ac46a9_feature_JNG_4327_AutoscanTemplateHelpers
+  virtual: false
+- branch: feature/JNG-4327_AutoscanTemplateHelpers
+  github: BlackbeltTechnology/judo-generator-commons
+  ignored: false
+  name: judo-generator-commons
+  path: judo-generator-commons
+  property: judo-generator-commons-version
+  rank: 1
+  url: git@github.com:BlackbeltTechnology/judo-generator-commons.git
+  version: 1.0.0.20221220_005707_072b438d_feature_JNG_4327_AutoscanTemplateHelpers
   virtual: false
