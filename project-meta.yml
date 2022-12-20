@@ -681,7 +681,7 @@
   url: git@github.com:BlackbeltTechnology/judo-generator-commons.git
   version: 1.0.0.20221220_005707_072b438d_feature_JNG_4327_AutoscanTemplateHelpers
   virtual: false
-- branch: feature/JNG-4160_Adding_scopes_add_missing_syntaxis
+- branch: develop
   github: BlackbeltTechnology/judo-jsl-tmbundle
   ignored: false
   name: judo-jsl-tmbundle
