@@ -110,3 +110,7 @@
 	path = judo-psm-generator-sdk-core
 	url = git@github.com:BlackBeltTechnology/judo-psm-generator-sdk-core.git
 	branch = develop
+[submodule "judo-generator-commons"]
+	path = judo-generator-commons
+	url = git@github.com:BlackBeltTechnology/judo-generator-commons.git
+	branch = develop
