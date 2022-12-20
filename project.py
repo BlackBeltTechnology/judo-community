@@ -1375,7 +1375,7 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
 #    for _module in calculate_modules_to_update(_modules, _module_by_name, _release_build=_release_build):
     _error = False
     for _module in _modules:
-        if _module.branch not in ["master", "develop"]:
+        if _release_build and _module.branch not in ["master", "develop"]:
             print(f"\n{Fore.RED}To release '{_module.name}' branch have to be 'develop' or 'master'. ")
             _error = True
 

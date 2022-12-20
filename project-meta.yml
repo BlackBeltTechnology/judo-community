@@ -382,7 +382,7 @@
   afterversionchange:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
   - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: master
+  branch: develop
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
@@ -403,7 +403,7 @@
   property: judo-meta-psm-version
   rank: 2
   url: git@github.com:BlackbeltTechnology/judo-meta-psm.git
-  version: 1.2.3
+  version: 1.2.4.20221208_130618_fd953c86_develop
   virtual: false
 - afterlocalbuild:
   - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
@@ -505,12 +505,12 @@
   url: git@github.com:BlackbeltTechnology/judo-runtime-core.git
   version: 1.0.5
   virtual: false
-- branch: master
+- branch: develop
   dependencies:
-  - epsilon-runtime
-  - judo-tatami-core
   - judo-tatami-jsl
   - judo-runtime-core
+  - judo-psm-generator
+  - judo-psm-generator-sdk-core
   github: BlackbeltTechnology/judo-runtime-core-jsl
   ignored: false
   name: judo-runtime-core-jsl
@@ -518,7 +518,7 @@
   property: judo-runtime-core-jsl-version
   rank: 8
   url: git@github.com:BlackbeltTechnology/judo-runtime-core-jsl.git
-  version: 1.0.2
+  version: 1.0.3.20221220_000834_1bf28be9_develop
   virtual: false
 - branch: master
   dependencies:
@@ -575,7 +575,7 @@
   url: git@github.com:BlackbeltTechnology/judo-tatami-core.git
   version: 1.1.3
   virtual: false
-- branch: master
+- branch: develop
   dependencies:
   - judo-meta-jsl
   - judo-meta-rdbms
@@ -600,9 +600,9 @@
   property: judo-tatami-jsl-version
   rank: 7
   url: git@github.com:BlackbeltTechnology/judo-tatami-jsl.git
-  version: 1.1.3
+  version: 1.1.4.20221219_080131_9dabe325_develop
   virtual: false
-- branch: master
+- branch: develop
   dependencies:
   - epsilon-runtime
   - judo-tatami-core
@@ -615,7 +615,7 @@
   property: judo-jsl-springboot-parent-version
   rank: 8
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-parent.git
-  version: 1.0.4
+  version: 1.0.5.20221219_080429_2b02d9a4_develop
   virtual: false
 - branch: master
   dependencies:
@@ -629,7 +629,7 @@
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-starter.git
   version: 1.0.3
   virtual: false
-- branch: master
+- branch: develop
   dependencies:
   - judo-jsl-springboot-starter
   - judo-tatami-jsl
@@ -640,5 +640,31 @@
   property: judo-jsl-springboot-archetype-version
   rank: 8
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-archetype.git
-  version: 1.0.5
+  version: 1.0.6.20221219_080235_d4e2ac6a_develop
+  virtual: false
+- branch: develop
+  dependencies:
+  - judo-meta-psm
+  - epsilon-runtime
+  github: BlackbeltTechnology/judo-psm-generator
+  ignored: false
+  name: judo-psm-generator
+  path: judo-psm-generator
+  property: judo-psm-generator-version
+  rank: 3
+  url: git@github.com:BlackbeltTechnology/judo-psm-generator.git
+  version: 1.0.0.20221216_232045_11537782_develop
+  virtual: false
+- branch: develop
+  dependencies:
+  - judo-psm-generator
+  - judo-meta-psm
+  github: BlackbeltTechnology/judo-psm-generator-sdk-core
+  ignored: false
+  name: judo-psm-generator-sdk-core
+  path: judo-psm-generator-sdk-core
+  property: judo-psm-generator-sdk-core-version
+  rank: 4
+  url: git@github.com:BlackbeltTechnology/judo-psm-generator-sdk-core.git
+  version: 1.0.0.20221220_000910_6ae05a93_develop
   virtual: false
