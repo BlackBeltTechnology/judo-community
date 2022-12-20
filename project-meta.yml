@@ -505,7 +505,7 @@
   url: git@github.com:BlackbeltTechnology/judo-runtime-core.git
   version: 1.0.5
   virtual: false
-- branch: feature/JNG-4256_AddPsm2SdkCoreTemplates
+- branch: develop
   dependencies:
   - judo-tatami-jsl
   - judo-runtime-core
@@ -518,7 +518,7 @@
   property: judo-runtime-core-jsl-version
   rank: 8
   url: git@github.com:BlackbeltTechnology/judo-runtime-core-jsl.git
-  version: 1.0.3.20221216_194154_17580baf_feature_JNG_4256_AddPsm2SdkCoreTemplates
+  version: 1.0.3.20221220_000834_1bf28be9_develop
   virtual: false
 - branch: master
   dependencies:
@@ -575,7 +575,7 @@
   url: git@github.com:BlackbeltTechnology/judo-tatami-core.git
   version: 1.1.3
   virtual: false
-- branch: feature/JNG-4256_AddPsm2SdkCoreTemplates
+- branch: develop
   dependencies:
   - judo-meta-jsl
   - judo-meta-rdbms
@@ -600,9 +600,9 @@
   property: judo-tatami-jsl-version
   rank: 7
   url: git@github.com:BlackbeltTechnology/judo-tatami-jsl.git
-  version: 1.1.4.20221216_193926_726ee770_feature_JNG_4256_AddPsm2SdkCoreTemplates
+  version: 1.1.4.20221219_080131_9dabe325_develop
   virtual: false
-- branch: feature/JNG-4256_AddPsm2SdkCoreTemplates
+- branch: develop
   dependencies:
   - epsilon-runtime
   - judo-tatami-core
@@ -615,7 +615,7 @@
   property: judo-jsl-springboot-parent-version
   rank: 8
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-parent.git
-  version: 1.0.5.20221216_194202_44a27baf_feature_JNG_4256_AddPsm2SdkCoreTemplates
+  version: 1.0.5.20221219_080429_2b02d9a4_develop
   virtual: false
 - branch: master
   dependencies:
@@ -629,7 +629,7 @@
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-starter.git
   version: 1.0.3
   virtual: false
-- branch: feature/JNG-4256_AddPsm2SdkCoreTemplates
+- branch: develop
   dependencies:
   - judo-jsl-springboot-starter
   - judo-tatami-jsl
@@ -640,9 +640,9 @@
   property: judo-jsl-springboot-archetype-version
   rank: 8
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-archetype.git
-  version: 1.0.6.20221216_194202_2f09bd7c_feature_JNG_4256_AddPsm2SdkCoreTemplates
+  version: 1.0.6.20221219_080235_d4e2ac6a_develop
   virtual: false
-- branch: feature/JNG-4256_AddPsm2SdkCoreTemplates
+- branch: develop
   dependencies:
   - judo-meta-psm
   - epsilon-runtime
@@ -653,9 +653,9 @@
   property: judo-psm-generator-version
   rank: 3
   url: git@github.com:BlackbeltTechnology/judo-psm-generator.git
-  version: 1.0.0.20221216_193923_3b109dfb_feature_JNG_4256_AddPsm2SdkCoreTemplates
+  version: 1.0.0.20221216_232045_11537782_develop
   virtual: false
-- branch: feature/JNG-4256_AddPsm2SdkCoreTemplates
+- branch: develop
   dependencies:
   - judo-psm-generator
   - judo-meta-psm
@@ -666,5 +666,5 @@
   property: judo-psm-generator-sdk-core-version
   rank: 4
   url: git@github.com:BlackbeltTechnology/judo-psm-generator-sdk-core.git
-  version: 1.0.0.20221216_194018_d93592e4_feature_JNG_4256_AddPsm2SdkCoreTemplates
+  version: 1.0.0.20221220_000910_6ae05a93_develop
   virtual: false
