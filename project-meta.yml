@@ -138,7 +138,7 @@
   url: git@github.com:BlackbeltTechnology/judo-dispatcher-api.git
   version: 1.0.2
   virtual: false
-- branch: feature/JNG-4160_Adding_scopes_add_missing_syntaxis
+- branch: develop
   dependencies:
   - judo-meta-jsl
   - judo-jsl-tmbundle
@@ -643,7 +643,7 @@
   url: git@github.com:BlackbeltTechnology/judo-jsl-springboot-archetype.git
   version: 1.0.6.20221219_080235_d4e2ac6a_develop
   virtual: false
-- branch: feature/JNG-4327_AutoscanTemplateHelpers
+- branch: develop
   dependencies:
   - judo-meta-psm
   - epsilon-runtime
@@ -657,7 +657,7 @@
   url: git@github.com:BlackbeltTechnology/judo-psm-generator.git
   version: 1.0.0.20221220_011244_d4d44280_feature_JNG_4327_AutoscanTemplateHelpers
   virtual: false
-- branch: feature/JNG-4327_AutoscanTemplateHelpers
+- branch: develop
   dependencies:
   - judo-psm-generator
   - judo-meta-psm
@@ -671,7 +671,7 @@
   url: git@github.com:BlackbeltTechnology/judo-psm-generator-sdk-core.git
   version: 1.0.0.20221220_012022_a0ac46a9_feature_JNG_4327_AutoscanTemplateHelpers
   virtual: false
-- branch: feature/JNG-4327_AutoscanTemplateHelpers
+- branch: develop
   github: BlackbeltTechnology/judo-generator-commons
   ignored: false
   name: judo-generator-commons
@@ -681,7 +681,7 @@
   url: git@github.com:BlackbeltTechnology/judo-generator-commons.git
   version: 1.0.0.20221220_005707_072b438d_feature_JNG_4327_AutoscanTemplateHelpers
   virtual: false
-- branch: feature/JNG-4160_Adding_scopes_add_missing_syntaxis
+- branch: develop
   github: BlackbeltTechnology/judo-jsl-tmbundle
   ignored: false
   name: judo-jsl-tmbundle
