@@ -102,3 +102,15 @@
 	path = judo-jsl-tmbundle
 	url = git@github.com:BlackBeltTechnology/judo-jsl-tmbundle.git
 	branch = develop
+[submodule "judo-psm-generator"]
+	path = judo-psm-generator
+	url = git@github.com:BlackBeltTechnology/judo-psm-generator.git
+	branch = develop
+[submodule "judo-psm-generator-sdk-core"]
+	path = judo-psm-generator-sdk-core
+	url = git@github.com:BlackBeltTechnology/judo-psm-generator-sdk-core.git
+	branch = develop
+[submodule "judo-generator-commons"]
+	path = judo-generator-commons
+	url = git@github.com:BlackBeltTechnology/judo-generator-commons.git
+	branch = develop
