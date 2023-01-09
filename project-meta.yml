@@ -308,6 +308,7 @@
   - osgi-utils
   - judo-epp-common
   - judo-misc-p2
+  - judo-requirement-report
   github: BlackbeltTechnology/judo-meta-jsl
   ignored: false
   name: judo-meta-jsl
