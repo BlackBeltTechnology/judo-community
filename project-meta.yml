@@ -526,6 +526,7 @@
   - judo-meta-asm
   - judo-dao-api
   - structured-map-proxy
+  - judo-requirement-report
   github: BlackbeltTechnology/judo-sdk-common
   ignored: false
   name: judo-sdk-common
@@ -690,4 +691,14 @@
   rank: 1
   url: git@github.com:BlackbeltTechnology/judo-jsl-tmbundle.git
   version: 1.0.0.20221220_095948_82d05ab3_feature_JNG_4160_Adding_scopes_add_missing_syntaxis
+  virtual: false
+- branch: feature/JNG-4297_Creating_Judo_test_methodology
+  github: BlackbeltTechnology/judo-requirement-report
+  ignored: false
+  name: judo-requirement-report
+  path: judo-requirement-report
+  property: judo-requirement-report-version
+  rank: 1
+  url: git@github.com:BlackBeltTechnology/judo-requirement-report.git
+  version: 1.0.0.20230109_180207_a567f86d_feature_JNG_4297_Creating_Judo_test_methodology
   virtual: false
