@@ -7,7 +7,7 @@ This section defines some useful terms, expressions and acronyms because the doc
 |Term / Expression / Acronym | Definition / Description
 
 |[#document-section]*Document section*
-|TODO
+|A section in a JUDO document that start with a heading paragraph.
 
 |[#requirement]*Requirement*
 |In JUDO context the requirement and the xref:#feature[feature] are synonyms each other.

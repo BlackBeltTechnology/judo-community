@@ -20,9 +20,11 @@ If you add a new functional definition document (*.adoc), you need to add a _jud
 
 ----
 
-==== Check the uniqueness of the prefix.
+The current naming convention is to start with "REQ-" and it follows by 3-4 upper case characters, which are together creating an abbreviation or acronym that refers the function set.
 
-TODO
+==== Checking the uniqueness of the judo-reqprefix.
+
+TODO: JNG-4364
 
 [#newsection]
 === Adding new section into an existing adoc document
