@@ -114,3 +114,6 @@
 	path = judo-generator-commons
 	url = git@github.com:BlackBeltTechnology/judo-generator-commons.git
 	branch = develop
+[submodule "judo-requirement-report"]
+	path = judo-requirement-report
+	url = https://github.com/BlackBeltTechnology/judo-requirement-report

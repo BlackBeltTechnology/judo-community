@@ -513,6 +513,7 @@
   - judo-runtime-core
   - judo-psm-generator
   - judo-psm-generator-sdk-core
+  - judo-requirement-report
   github: BlackbeltTechnology/judo-runtime-core-jsl
   ignored: false
   name: judo-runtime-core-jsl
@@ -527,7 +528,6 @@
   - judo-meta-asm
   - judo-dao-api
   - structured-map-proxy
-  - judo-requirement-report
   github: BlackbeltTechnology/judo-sdk-common
   ignored: false
   name: judo-sdk-common
