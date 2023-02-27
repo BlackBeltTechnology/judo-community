@@ -398,10 +398,6 @@ class Module(object):
         if 'afterlocalbuild' in init_dict:
             self.afterlocalbuild = init_dict['afterlocalbuild']
 
-        self.p2 = {}
-        if 'p2' in init_dict:
-            self.p2 = init_dict['p2']
-
         self.ignored = False
         if 'ignored' in init_dict:
             self.ignored = init_dict['ignored']
@@ -1299,45 +1295,6 @@ def build_snapshot(_modules, _process_info, _module_by_name):
     for _module in _modules:
         _process_info[_module] = {"status": "RUNNING"}
 
-        if _module.p2 and 'target' in _module.p2.keys():
-            if 'releaselocations' not in _module.p2.keys():
-                raise SystemExit(f"\n{Fore.RED}Error when building {_module.name}. `releaselocations` not defined. "
-                                 f"\nTo retry, run {Fore.YELLOW}{_retry_command} -c {_module.name}{Style.RESET_ALL}")
-
-            with open(os.path.abspath(os.getcwd() + "/" + _module.path + "/" + _module.p2['releaselocations'])) as f:
-                _releaseLocs = {k: v for _line in filter(str.rstrip, f) for (k, v) in [_line.strip().split(None, 1)]}
-
-            _locations: Dict[Any, str] = dict(_releaseLocs)
-            for _dependency_module in _module.dependencies:
-                _locations_key = _dependency_module.name + "-location"
-                _version = current_pom_version(_module, _dependency_module)
-
-                if not _version:
-                    raise SystemExit(
-                        f"\n{Fore.RED}Error when building {_module.name}. "
-                        f"Dependency {_dependency_module.name} version not found. "
-                        f"\nTo retry, run {Fore.YELLOW}{_retry_command} -c {_module.name}{Style.RESET_ALL}")
-                _value = None
-
-                if _dependency_module in _processable_modules and _dependency_module.p2:
-                    _value = "file:" + os.path.abspath(
-                        os.getcwd() + "/" + _dependency_module.path + "/" + _dependency_module.p2['localsite'])
-                elif _locations_key in _releaseLocs.keys():
-                    _value = _releaseLocs[_locations_key]
-
-                if _value:
-                    _locations[_locations_key] = _value.replace("${" + _dependency_module.property + "}", _version)
-
-            print(f"\n{Fore.YELLOW}P2 Locations: {Style.RESET_ALL}\n {json.dumps(_locations, indent=4)}")
-
-            with open(os.path.abspath(os.getcwd() + "/" + _module.path + "/" + _module.p2['template'])) as _tf:
-                _template = "".join(_tf.readlines()).replace("${build.timestamp.millis}", str(int(time.time() * 1000)))
-                for _loc in _locations.keys():
-                    _template = _template.replace("${" + _loc + "}", _locations[_loc])
-                with open(os.path.abspath(os.getcwd() + "/" + _module.path + "/" + _module.p2['target']), 'w',
-                          encoding='utf-8') as _out:
-                    _out.write(_template)
-
         _status = build_module(_module, _version_args)
         _status2 = True
 
@@ -1375,7 +1332,7 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
 #    for _module in calculate_modules_to_update(_modules, _module_by_name, _release_build=_release_build):
     _error = False
     for _module in _modules:
-        if _release_build and _module.branch not in ["master", "develop"]:
+        if (not args.integration_build) and (_module.branch not in ["master", "develop"]):
             print(f"\n{Fore.RED}To release '{_module.name}' branch have to be 'develop' or 'master'. ")
             _error = True
 
@@ -1566,7 +1523,7 @@ if args.git_checkout or args.release_build:
             module.checkout_branch()
             module.checkout_tags()
 
-pending_changes = check_module_depenencies(modules, module_by_name)
+pending_changes = check_module_depenencies(modules, module_by_name, _fix_dependencies=args.fix_dependencies)
 if not args.dirty and pending_changes:
     save_modules(modules, module_by_name)
 
@@ -1826,7 +1783,9 @@ if args.relnotes:
               "contains all required artifacts which are used to build Eclipse Designer.\n"
     output += f"To install plugins open `Install new Software` window and in update site " \
               f"add `https://nexus.judo.technology/repository/p2/judo-eclipse-development/" \
-              f"{module_by_name['judo-eclipse-development'].version}`/ \n"
+              f"{module_by_name['judo-eclipse-development'].version}`/  or use the "\
+              f"`https://nexus.judo.technology/repository/p2/judo-eclipse-development/develop " \
+              f"for daily builder current version"
     output += "To update a previously installed version, set the update site URL to the desired one and update the " \
               "plugin.\n"
     output += "\n"

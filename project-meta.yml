@@ -149,12 +149,7 @@
   url: git@github.com:BlackbeltTechnology/judo-jsl-vscode.git
   version: 1.0.4.20230201_041536_86aaffa9_develop
   virtual: false
-- afterlocalbuild:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  afterversionchange:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+- branch: develop
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
@@ -172,12 +167,7 @@
   url: git@github.com:BlackbeltTechnology/judo-meta-asm.git
   version: 1.1.4.20230207_041953_d839053d_develop
   virtual: false
-- afterlocalbuild:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  afterversionchange:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+- branch: develop
   dependencies:
   - judo-meta-jql
   - judo-meta-measure
@@ -197,12 +187,7 @@
   url: git@github.com:BlackbeltTechnology/judo-meta-expression.git
   version: 1.0.5.20230201_041534_ffcfa727_develop
   virtual: false
-- afterlocalbuild:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  afterversionchange:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+- branch: develop
   dependencies:
   - judo-meta-asm
   - judo-meta-expression
@@ -222,12 +207,7 @@
   url: git@github.com:BlackbeltTechnology/judo-meta-expression-asm.git
   version: 1.0.5.20230208_080117_b378cd9d_develop
   virtual: false
-- afterlocalbuild:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  afterversionchange:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+- branch: develop
   dependencies:
   - judo-meta-expression
   - judo-meta-psm
@@ -247,12 +227,7 @@
   url: git@github.com:BlackbeltTechnology/judo-meta-expression-psm.git
   version: 1.0.5.20230201_041911_308af3ce_develop
   virtual: false
-- afterlocalbuild:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  afterversionchange:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+- branch: develop
   dependencies:
   - emf-genmodel-generator
   - judo-genmodel-generator
@@ -268,12 +243,7 @@
   url: git@github.com:BlackbeltTechnology/judo-meta-psm-jql.git
   version: 1.0.4.20230131_040907_eb2d118a_develop
   virtual: false
-- afterlocalbuild:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  afterversionchange:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+- branch: develop
   dependencies:
   - emf-genmodel-generator
   - judo-genmodel-generator
@@ -291,12 +261,7 @@
   url: git@github.com:BlackbeltTechnology/judo-meta-jsl.git
   version: 1.0.3.20230131_192906_e9134fa9_develop
   virtual: false
-- afterlocalbuild:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  afterversionchange:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+- branch: develop
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
@@ -314,12 +279,7 @@
   url: git@github.com:BlackbeltTechnology/judo-meta-liquibase.git
   version: 1.0.2.20230120_214123_1e502bf2_develop
   virtual: false
-- afterlocalbuild:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  afterversionchange:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+- branch: develop
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
@@ -337,12 +297,7 @@
   url: git@github.com:BlackbeltTechnology/judo-meta-measure.git
   version: 1.0.2.20230207_042013_39921fb5_develop
   virtual: false
-- afterlocalbuild:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  afterversionchange:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+- branch: develop
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
@@ -361,12 +316,7 @@
   url: git@github.com:BlackbeltTechnology/judo-meta-psm.git
   version: 1.2.4.20230207_042332_0fff9a62_develop
   virtual: false
-- afterlocalbuild:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  afterversionchange:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+- branch: develop
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
@@ -384,12 +334,7 @@
   url: git@github.com:BlackbeltTechnology/judo-meta-query.git
   version: 1.0.3.20230207_071810_16528556_develop
   virtual: false
-- afterlocalbuild:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  afterversionchange:
-  - mvn install -Dtycho.mode=maven -P update-target-versions -f ./targetdefinition/pom.xml
-  - mvn validate -Dtycho.mode=maven -DskipModules -P update-category-versions -f ./pom.xml
-  branch: develop
+- branch: develop
   dependencies:
   - epsilon-runtime
   - epsilon-runtime-eclipse
