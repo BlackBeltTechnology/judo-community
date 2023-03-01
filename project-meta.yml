@@ -14,7 +14,7 @@
   property: epsilon-runtime-eclipse-version
   rank: 1
   url: git@github.com:BlackbeltTechnology//epsilon-runtime-eclipse.git
-  version: 1.5.4.20230207_041509_3d79e9b8_develop
+  version: 1.5.4.20230228_151544_2976a285_develop
   virtual: true
 - branch: develop
   github: BlackbeltTechnology/emf-genmodel-generator
@@ -23,7 +23,7 @@
   property: emf-genmodel-generator-version
   rank: 1
   url: git@github.com:BlackbeltTechnology/emf-genmodel-generator.git
-  version: 1.1.1.20230120_152641_f8d06d79_develop
+  version: 1.1.1.20230228_151530_7d8a8ba3_develop
   virtual: true
 - branch: develop
   github: BlackbeltTechnology/judo-genmodel-generator
@@ -32,7 +32,7 @@
   property: judo-genmodel-generator-version
   rank: 1
   url: git@github.com:BlackbeltTechnology/judo-genmodel-generator.git
-  version: 1.1.2.20230120_213943_e83cbc72_develop
+  version: 1.1.2.20230301_040735_5ae0573d_develop
   virtual: true
 - branch: develop
   github: BlackbeltTechnology/judo-epp-common
@@ -41,7 +41,7 @@
   property: judo-epp-common-version
   rank: 1
   url: git@github.com:BlackbeltTechnology/judo-epp-common.git
-  version: 4.26.0.20230112_142558_abc6093e_develop
+  version: 4.26.0.20230228_152153_034ddbe7_develop
   virtual: true
 - branch: develop
   github: BlackbeltTechnology/osgi-utils
