@@ -117,3 +117,8 @@
 [submodule "judo-requirement-report"]
 	path = judo-requirement-report
 	url = https://github.com/BlackBeltTechnology/judo-requirement-report
+	branch = develop
+[submodule "judo-spring-maven-plugin"]
+	path = judo-spring-maven-plugin
+	url = git@github.com:BlackBeltTechnology/judo-spring-maven-plugin.git
+	branch = develop
