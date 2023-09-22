@@ -111,7 +111,7 @@ will use the versions is defined in their pom.xml
     ./project.py -bs
 
 It starts a build for all modules which is not virtual or ignored by default.
-With the -bm switch the modules where the build starts from can be defined. In that case
+With the -bs switch the modules where the build starts from can be defined. In that case
 the defined modules and all dependent modules starts to build.
 To ignore specific modules, use -bi switch.
 
@@ -178,6 +178,10 @@ import os
 import re
 import socket
 import webbrowser
+import traceback
+import sys
+import shutil
+
 from argparse import RawDescriptionHelpFormatter, ArgumentParser
 from typing import Any, Dict
 
@@ -195,8 +199,6 @@ from networkx.drawing.nx_pydot import write_dot, to_pydot
 from networkx.algorithms.dag import transitive_reduction
 from networkx.algorithms.dag import ancestors, descendants
 
-from asciidag.graph import Graph as AsciiGraph
-from asciidag.node import Node as AsciiNode
 from tqdm import tqdm
 
 import argparse
@@ -204,13 +206,16 @@ import textwrap
 
 from http.server import BaseHTTPRequestHandler
 import threading
+import tempfile
 
 from datetime import datetime
 
 from colorama import init, Fore, Style
 
 from atlassian import Jira
-
+import hashlib
+from datetime import datetime, timezone
+from email.utils import format_datetime
 # TODO: Adapt https://hal.archives-ouvertes.fr/hal-00695818/document
 # TODO: Adapt https://www.cse.wustl.edu/~lu/papers/tpds-dags.pdf
 
@@ -244,12 +249,18 @@ general_arg_group.add_argument("-tm", "--terminate-modules", dest="terminate_mod
                                metavar='MODULE...', nargs="*",
                                help="The process is terminated with these given modules. Only the models between "
                                     "modules and terminate modules will processed. ")
+general_arg_group.add_argument("-bm", "--branch-modules", action="store", dest="modules_with_branch", default=None,
+                               metavar='Branch name', nargs=1,
+                               help='Run only on the module(s) in defined branch')
 general_arg_group.add_argument("-im", "--ignored-modules", dest="ignored_modules", metavar='MODULE...',
                                nargs="*",
                                help="Ignore given module(s)")
 general_arg_group.add_argument("-c", "-continue-module", dest="continue_module",
                                metavar='MODULE', nargs=1,
                                help="Continue processing from the given module")
+general_arg_group.add_argument("-p", "-parallel", type=int, dest="parallel",
+                               metavar='MODULE',
+                               help="Number of parallel threads", default=4)
 general_arg_group.add_argument("-relnotes", "--release-notes", dest="relnotes", nargs=1,
                                metavar="FROM_HASH[..TO_HASH]",
                                help="Generate release notes based on different project-meta.yml versions")
@@ -340,23 +351,16 @@ process_info_server_pid: threading.Thread
 register_namespace('', 'http://maven.apache.org/POM/4.0.0')
 pom_namespace = "{http://maven.apache.org/POM/4.0.0}"
 
-# progress_widgets = [' [',
-#           progressbar.Timer(format='elapsed time: %(elapsed)s'),
-#           '] ',
-#           progressbar.Bar('*'), ' (',
-#           progressbar.ETA(), ') ',
-#           ]
-
 github = Github(login_or_token=args.github_token)
 
-
 class CloneProgress(RemoteProgress):
+    def __init__(self):
+        super().__init__()
+
     def update(self, op_code, cur_count, max_count=None, message=''):
-        if message:
-            print(message)
+        return
 
 
-# noinspection PyTypeChecker
 class CommentedTreeBuilder(TreeBuilder):
     def __init__(self, *arguments, **kwargs):
         super(CommentedTreeBuilder, self).__init__(*arguments, **kwargs)
@@ -366,11 +370,29 @@ class CommentedTreeBuilder(TreeBuilder):
         self.data(data)
         self.end(Comment)
 
+class PropagatingThread(threading.Thread):
+    def run(self):
+        self.exc = None
+        try:
+            if hasattr(self, '_Thread__target'):
+                # Thread uses name mangling prior to Python 3.
+                self.ret = self._Thread__target(*self._Thread__args, **self._Thread__kwargs)
+            else:
+                self.ret = self._target(*self._args, **self._kwargs)
+        except BaseException as e:
+            self.exc = e
+
+    def join(self, timeout=None):
+        super(PropagatingThread, self).join(timeout)
+        if self.exc:
+            raise self.exc
+        # return self.ret
 
 class Module(object):
     def __init__(self, init_dict):
         self.name = init_dict['name']
-        self.url = init_dict['url']
+        if 'url' in init_dict:
+	        self.url = init_dict['url']
 
         self.path = None
         if 'path' in init_dict:
@@ -381,7 +403,8 @@ class Module(object):
         self.rank = 1
         if 'version' in init_dict:
             self.version = init_dict['version']  # .encode("ascii", "ignore")
-        self.github = init_dict['github']
+        if 'github' in init_dict:
+	        self.github = init_dict['github']
         self.dependencies = []
         if 'dependencies' in init_dict:
             self.dependencies = init_dict['dependencies']
@@ -533,14 +556,27 @@ class Module(object):
     def call_afterlocalbuildscripts(self):
         _currentDir = os.getcwd() + '/' + self.path
         for afterlocalbuildscript in self.afterlocalbuild:
-            if call(afterlocalbuildscript, shell=True, cwd=_currentDir) != 0:
+            _log = tempfile.NamedTemporaryFile()
+            _ref = None
+            with open(_log.name, 'w') as f:
+                _ret = call(afterlocalbuildscript, shell=True, cwd=_currentDir, stdout=f, stderr=f)
+
+            if _ret != 0:
+                with open(_log, "r") as f:
+                    shutil.copyfileobj(f, sys.stdout)
                 return False
         return True
 
     def call_beforelocalbuildscripts(self):
         _currentDir = os.getcwd() + '/' + self.path
         for beforelocalbuildscript in self.beforelocalbuild:
-            if call(beforelocalbuildscript, shell=True, cwd=_currentDir) != 0:
+            _log = tempfile.NamedTemporaryFile()
+            _ref = None
+            with open(_log.name, 'w') as f:
+                _ret = call(beforelocalbuildscript, shell=True, cwd=_currentDir, stdout=f, stderr=f)
+            if _ret != 0:
+                with open(_log, "r") as f:
+                    shutil.copyfileobj(f, sys.stdout)
                 return False
         return True
 
@@ -550,19 +586,19 @@ class Module(object):
 
     def checkout_branch(self):
         _repo = self.repo()
-        print(f"{Fore.YELLOW}Checkout branch {Fore.GREEN}{self.branch} {Fore.YELLOW}in {Fore.GREEN}{_repo.git_dir}")
+        # print(f"{Fore.YELLOW}Checkout branch {Fore.GREEN}{self.branch} {Fore.YELLOW}in {Fore.GREEN}{_repo.git_dir}")
         if self.check_dirty():
-            print(f"{Fore.YELLOW} - Module is in dirty state, stashing")
+            print(f"{Fore.YELLOW} {self.name } is in dirty state, stashing")
             _repo.git.stash(["-u", "-m \"[AUTO STASH]\""])
 
         _updates = _repo.git.fetch(["--force", "origin"])
-        _updates = _repo.remotes.origin.fetch()
+        _updates = _repo.remotes.origin.fetch(progress=CloneProgress())
         # for fetch_info in _updates:
         #     print(f"Tag: {fetch_info.ref} Author: {fetch_info.ref.commit.author} SHA: {fetch_info.ref.commit.hexsha}")
 
         _repo.git.checkout(self.branch)
         _repo.head.reset(index=True, working_tree=True)
-        _repo.remotes.origin.pull()
+        _repo.remotes.origin.pull(progress=CloneProgress())
 
     def checkout_tags(self):
         _repo = self.repo()
@@ -776,7 +812,7 @@ def calculate_graph(_modules):
     for _module in _modules:
         for _dependency in _module.dependencies:
             if _dependency in _modules:
-                _g.add_edge(_module, _dependency)
+                _g.add_edge(_dependency, _module)
     return _g
 
 
@@ -786,13 +822,29 @@ def calculate_reduced_graph(_modules):
 
 
 def calculate_ranks(_modules):
-    _g = calculate_reduced_graph(_modules).reverse(copy=True)
+    _g = calculate_graph(_modules)
     _groups = list(topological_sort_grouped(_g))
-    rank = 0
+    _rank = 0
     for _group in _groups:
-        rank += 1
+        _rank += 1
         for _module in _group:
-            _module.rank = rank
+            _module.rank = _rank
+
+def slice_modules(_modules, _module_name, _begin):
+    _sliced_modules = []
+    _g = calculate_graph(_modules)
+    _groups = list(topological_sort_grouped(_g))
+    _found = False
+    for _group in _groups:
+        for _module in _group:
+            if _module.name == _module_name:
+                _found = True
+            if _begin and not _found:
+                _sliced_modules.append(_module)
+            if not _begin and _found:
+                _sliced_modules.append(_module)
+    return _sliced_modules
+
 
 
 # Algorithm from: https://stackoverflow.com/questions/56802797/digraph-parallel-ordering
@@ -892,32 +944,12 @@ def print_dependency_graph(_modules):
     write_dot(_g, "dependency.dot")
     to_pydot(_g).write_svg("dependency.svg")
 
-
 def print_dependency_graph_ascii(_modules):
     _available_modules = set(filter(lambda _m: not _m.ignored and not _m.virtual, _modules))
-
-    _g = calculate_reduced_graph(_available_modules)
+    _g = calculate_graph(_available_modules)
     _groups = list(topological_sort_grouped(_g))
-
-    _graph_root = []
-    _graph_nodes = {}
-
-    _prev_group = []
-    for _group in list(reversed(_groups)):
-        for _module in _group:
-            _ancestors = set(ancestors(_g, _module))
-            _descendants = set(descendants(_g, _module)).intersection(_prev_group)
-            _parent_nodes = list(map(lambda _d: _graph_nodes[_d.name], _descendants))
-            _current_node = AsciiNode(str(_module), _parent_nodes)
-            _graph_nodes[_module.name] = _current_node
-            if len(_ancestors) == 0:
-                _graph_root.append(_current_node)
-
-        _prev_group = _group
-
-    _graph = AsciiGraph()
-    _graph.show_nodes(_graph_root)
-
+    for idx in range(len(_groups)):
+        print(str(idx + 1) + " - " + str(_groups[idx]))
 
 def get_request_handler(_modules, _process_info):
     class MyHandler(http.server.BaseHTTPRequestHandler):
@@ -928,7 +960,8 @@ def get_request_handler(_modules, _process_info):
             self.end_headers()
 
         def do_GET(self):
-
+            body = ""
+            etag = ""
             _g = nx.DiGraph()
             for _module in _process_info.keys():
                 _g.add_node(_module)
@@ -954,22 +987,90 @@ def get_request_handler(_modules, _process_info):
                     _g.nodes[node]['fillcolor'] = "green"
                 if _process_info.get(node, {"status": ""}).get("status") == "IDLE":
                     _g.nodes[node]['fillcolor'] = "lightslategrey"
+                if _process_info.get(node, {"status": ""}).get("status") == "ERROR":
+                    _g.nodes[node]['fillcolor'] = "red"
 
-            svg = to_pydot(_g).create_svg().decode("utf-8")
+            dot_body = "<div id=\"dot\">" + to_pydot(_g).to_string() + "</div>"
 
-            message_bytes = svg.encode('ascii')
-            base64_bytes = base64.b64encode(message_bytes)
-            body = "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title/></head><body onload=\"load()\">" \
-                   "<script type=\"text/javascript\">" \
-                   "function load() { setTimeout(\"window.open(self.location, '_self');\", 5000); }" \
-                   "</script>" \
-                   "<embed src=\"data:image/svg+xml;base64," + base64_bytes.decode('ascii') + "\"/>" + "</body></html>"
+            if self.path.endswith('/svg'):
+                svg = to_pydot(_g).create_svg().decode("utf-8")
+                message_bytes = svg.encode('ascii')
+                base64_bytes = base64.b64encode(message_bytes)
+                body = "<embed src=\"data:image/svg+xml;base64," + base64_bytes.decode('ascii') + "\"/>"
+
+            elif self.path.endswith('/dot'):
+                body = dot_body
+                md5 = hashlib.md5(body.encode('utf-8')).hexdigest()
+                req_md5 = self.headers['If-None-Match']
+                req_modified_since = self.headers["If-Modified-Since"]
+                etag = md5
+                if ("\"" + md5 + "\"") == req_md5 or ("\"" + md5 + "\"") == req_modified_since:
+                    self.send_response(304)
+                    self.send_header("ETag", "\"" + etag + "\"")
+                    # self.send_header("Last-Modified", format_datetime(datetime.now(timezone.utc), usegmt=True))
+                    self.send_header("Last-Modified", "\"" + etag + "\"")
+                    self.end_headers()
+                    return
+            else:
+                body = ('''
+                        <!doctype html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="utf-8"/>
+                            <meta name="viewport" content="width=device-width" />
+                            <title>project.py</title>
+                            <script src="https://unpkg.com/htmx.org@1.9.5"></script>
+                            <script src="https://d3js.org/d3.v5.min.js"></script>
+                            <script src="https://unpkg.com/@hpcc-js/wasm@0.3.11/dist/index.min.js"></script>
+                            <script src="https://unpkg.com/d3-graphviz@3.0.5/build/d3-graphviz.js"></script>
+                       </head>
+                       <body style="margin: 0;padding: 0;">
+                            <div id="graph" style="text-align: center;"></div>
+                            <div style="width: 0px; height:0px; visibility: hidden" hx-get="/dot" hx-swap="innerHTML" hx-trigger="every 5s">''' + dot_body + '''</div>
+                            <script>
+                                var margin = 20; // to avoid scrollbars
+                                var width = window.innerWidth - margin;
+                                var height = window.innerHeight - margin - 40;
+                                var graphviz = d3.select("#graph").graphviz()
+                                    .transition(function () {
+                                        return d3.transition("main")
+                                            .ease(d3.easeLinear)
+                                            .delay(0)
+                                            .duration(750);
+                                    })
+                                    .zoom(true);
+
+                                function render() {
+                                    graphviz
+                                        .width(width)
+                                        .height(height)
+                                        .renderDot(document.getElementById("dot").textContent);
+                                }
+                                document.addEventListener("resize", function(evt) {
+                                    var width = window.innerWidth - margin;
+                                    var height = window.innerHeight - margin - 40;
+                                    render();
+                                });
+                                document.addEventListener('htmx:afterRequest', function(evt) {
+                                    render();
+                                });
+                                document.addEventListener('DOMContentLoaded', function(evt) {
+                                    render();
+                                });
+                            </script>
+                       </body>
+                       </html>''').strip()
 
             self.send_response(200)
-            self.send_header("Content-type", "image/svg+xml; charset=utf-8")
+            self.send_header("Content-type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
+            self.send_header("ETag", "\"" + etag + "\"")
+            self.send_header("Last-Modified", "\"" + etag + "\"")
             self.end_headers()
             self.wfile.write(bytes(body, "utf-8"))
+
+        def log_message(self, format, *args):
+            return
 
     return MyHandler
 
@@ -982,12 +1083,12 @@ def start_process_info_server(_modules, _process_info):
     print(f"{Fore.YELLOW}Serving at port:{Fore.GREEN}{_port}")
     server_address = ('localhost', _port)
     httpd: StoppableHTTPServer = StoppableHTTPServer(server_address, get_request_handler(_modules, _process_info))
-    threading.Thread(target=lambda: webbrowser.open_new_tab(f"http://127.0.0.1:{_port}")).start()
+#    threading.Thread(target=lambda: webbrowser.open_new_tab(f"http://127.0.0.1:{_port}")).start()
     return httpd
 
 
 def calculate_modules_to_update(_modules, _module_by_name, _active_processes=None, _release_build=False,
-                                _already_processed_modules=None):
+                                _already_processed_modules=None, _check_pom_change=True):
     if _active_processes is None:
         _active_processes = set()
     if _already_processed_modules is None:
@@ -996,22 +1097,25 @@ def calculate_modules_to_update(_modules, _module_by_name, _active_processes=Non
     _updated_modules = set()
     for _module in _modules:
         if not _module.ignored and not _module.virtual and _module not in _already_processed_modules:
-            # print("Checking dependency update in POM: " + _module.name)
-            if _release_build:
-                _master_deps_only = len(list(filter(lambda _dep_module: _dep_module.branch != 'master',
-                                                    _module.dependencies))) == 0
-                if (_master_deps_only and _module.branch == 'develop') or \
-                        _module.update_dependency_versions_in_pom(False):
-                    _updated_modules.add(_module)
-
-            if not _release_build and _module.update_dependency_versions_in_pom(False):
+            if not _check_pom_change:
                 _updated_modules.add(_module)
+            else:
+                # print("Checking dependency update in POM: " + _module.name)
+                if _release_build:
+                    _master_deps_only = len(list(filter(lambda _dep_module: _dep_module.branch != 'master',
+                                                        _module.dependencies))) == 0
+                    if (_master_deps_only and _module.branch == 'develop') or \
+                            _module.update_dependency_versions_in_pom(False):
+                        _updated_modules.add(_module)
+
+                if not _release_build and _module.update_dependency_versions_in_pom(False):
+                    _updated_modules.add(_module)
 
     # Removing modules which have dependency on current modules
     _removable_modules = set()
     for _module in _updated_modules.union(_active_processes):
         _removable_modules = _removable_modules.union(set(
-            ancestors(calculate_graph(_modules), _module)))
+            descendants(calculate_graph(_modules), _module)))
 
     _updated_modules = _updated_modules.difference(_removable_modules)
     return _updated_modules
@@ -1100,6 +1204,7 @@ def build_module(_module, arguments=None):
     print(f"\n{Fore.YELLOW}Building module{Style.RESET_ALL} {Fore.WHITE}{_module.path}{Style.RESET_ALL}")
     _currentDir = os.getcwd() + '/' + _module.path
     if not _module.call_beforelocalbuildscripts():
+        print(f"\n{Fore.RED}Error execution before local build script for {_module.name}. ")
         return False
 
     _original_versions = {}
@@ -1121,12 +1226,19 @@ def build_module(_module, arguments=None):
     if len(_original_versions) > 0:
         _pom.write(_module.path + "/pom.xml", encoding="UTF-8")
 
-    cmd = "mvn clean install  " + (" ".join(list(map(lambda x: f"-D{x}", arguments))))
+    _log = tempfile.NamedTemporaryFile()
+    cmd = "mvn clean install " + (" ".join(list(map(lambda x: f"-D{x}", arguments))))
     print(f"{Fore.YELLOW}Calling maven: \n\t{Fore.CYAN}{cmd}{Style.RESET_ALL}\n")
     print(
         f"{Fore.GREEN}================================================================================"
         f"{Style.RESET_ALL}")
-    _ret = call(cmd, shell=True, cwd=_currentDir)
+
+    with open(_log.name, 'w') as f:
+        _ret = call(cmd, shell=True, cwd=_currentDir, stdout=f, stderr=f)
+
+    if not _module.call_afterlocalbuildscripts():
+        print(f"\n{Fore.RED}Error execution after local build script for {_module.name}. ")
+        return False
 
     if not args.keep_changes:
         # Restore versions properties to original values in pom.xml
@@ -1137,6 +1249,8 @@ def build_module(_module, arguments=None):
             _pom.write(_module.path + "/pom.xml", encoding="UTF-8")
 
     if _ret != 0:
+        with open(_log.name, 'r') as f:
+            shutil.copyfileobj(f, sys.stdout)
         return False
     return True
 
@@ -1165,6 +1279,15 @@ def ignored_modules(_module_by_name):
 def start_modules(_module_by_name):
     return get_module(args.start_modules, _module_by_name)
 
+def modules_with_branch(_branch_name, _modules):
+    _branch_modules = set()
+    for _module in _modules:
+        if _module.branch == _branch_name:
+            if _module.virtual:
+                raise SystemExit(f"\n{Fore.RED}Virtual module cannot be used in snapshot mode: {_module_name}.")
+            _branch_modules.add(_module)
+    return _branch_modules
+
 
 def calc_retry_command_for_build(_modules, _process_info, _module_by_name):
     _retry_command = ""
@@ -1187,11 +1310,18 @@ def calc_retry_command_for_build(_modules, _process_info, _module_by_name):
         for _module in _terminate_modules:
             _retry_command = _retry_command + _module.name + " "
 
+    if len(args.modules_with_branch) > 0:
+        _retry_command = _retry_command + "-bm " + args.modules_with_branch[0] + " "
+
     return _retry_command
 
 
 def calculate_processable_modules(_modules, _process_info, _module_by_name):
     _available_modules = set(filter(lambda _m: not _m.ignored and not _m.virtual, _modules))
+    if args.modules_with_branch:
+        print(f"Calculate modules with branch: {args.modules_with_branch[0]}" )
+        return modules_with_branch(args.modules_with_branch[0], _available_modules)
+
     _ignored_modules = ignored_modules(_module_by_name).union(
         set(filter(lambda _m: _m.virtual or _m.ignored, _modules)))
     _start_modules = start_modules(_module_by_name)
@@ -1203,14 +1333,14 @@ def calculate_processable_modules(_modules, _process_info, _module_by_name):
     #         ", ".join(map(lambda _m: _m.name, list(_start_modules)))))
 
     if len(_start_modules) == 0:
-        _g = calculate_graph(_available_modules).reverse(copy=True)
+        _g = calculate_graph(_available_modules)
         _groups = list(topological_sort_grouped(_g))
         if len(_groups) > 0:
             _start_modules = _groups[0]
 
     if len(_terminate_modules) > 0:
         for _module_terminate in _terminate_modules:
-            # removing terminate modules ancestors
+            # removing terminate modules descendants
             _terminate_ancestors = set(ancestors(calculate_graph(_available_modules), _module_terminate))
             _terminate_descendants = set(
                 descendants(calculate_graph(_available_modules), _module_terminate))
@@ -1225,14 +1355,14 @@ def calculate_processable_modules(_modules, _process_info, _module_by_name):
 
     if len(_start_modules) > 0:
         _modules_to_build = set(_start_modules)
-        _start_modules_ancestors = set()
+        _start_modules_descendants = set()
         _terminate_ancestors = set()
         _terminate_descendants = set()
 
         for _module in _start_modules:
-            _start_modules_ancestors = _start_modules_ancestors.union(set(ancestors(calculate_graph(_available_modules),
+            _start_modules_descendants = _start_modules_descendants.union(set(descendants(calculate_graph(_available_modules),
                                                                                     _module)))
-            # print(f"{Fore.BLUE}{_module.name} {Style.RESET_ALL} ancestors (all): " + (
+            # print(f"{Fore.BLUE}{_module.name} {Style.RESET_ALL} descendants (all): " + (
             #     ", ".join(
             #         map(lambda _m: _m.name, _calculated_modules))))
 
@@ -1247,12 +1377,12 @@ def calculate_processable_modules(_modules, _process_info, _module_by_name):
                     calculate_graph(_available_modules), _module_terminate)))
                 # the required modules is the intersection of terminate modules' descendants and module's ascendants
 
-        _calculated_modules = _start_modules_ancestors
+        _calculated_modules = _start_modules_descendants
         if len(_terminate_descendants) > 0 or len(_terminate_ancestors) > 0:
-            _calculated_modules = _start_modules_ancestors.union(_start_modules) \
-                .intersection(_terminate_descendants.union(_terminate_modules))
+            _calculated_modules = _start_modules_descendants.union(_start_modules) \
+                .intersection(_terminate_ancestors.union(_terminate_modules))
 
-            # print(f"{Fore.BLUE}{_module.name} {Style.RESET_ALL} ancestors (reduced with terminated): " + (
+            # print(f"{Fore.BLUE}{_module.name} {Style.RESET_ALL} descendants (reduced with terminated): " + (
             #     ", ".join(
             #         map(lambda _m: _m.name, _calculated_modules))))
         _modules_to_build = _modules_to_build.union(_calculated_modules)
@@ -1269,15 +1399,18 @@ def calculate_processable_modules(_modules, _process_info, _module_by_name):
     return _modules_to_build
 
 
+def run_mvn_process(*args, **kwargs):
+    _module = kwargs['module']
+    _version_args = kwargs['version_args']
+    _status = build_module(_module, _version_args)
+
+    if not _status:
+        raise Exception(f"\n{Fore.RED}Error when building {_module.name}.")
+
+
 def build_snapshot(_modules, _process_info, _module_by_name):
     _ignored_modules = ignored_modules(_module_by_name)
 
-    #    if len(ignored_modules()) > 0:
-    #        print(f"{Fore.YELLOW}Modules ignored:{Style.RESET_ALL} " + (
-    #            ", ".join(map(lambda _m: _m.name, list(_ignored_modules)))) + "\n")
-    #    ✓
-
-    _retry_command = './project.py -bs ' + calc_retry_command_for_build(_modules, _process_info, _module_by_name)
     _version_args = []
     for _module in _modules:
         _version_args.append(_module.property + "=" + current_snapshot_version(_module))
@@ -1286,26 +1419,70 @@ def build_snapshot(_modules, _process_info, _module_by_name):
         map(lambda _v: f"{Fore.WHITE}{_v.split('=')[0]} {Fore.YELLOW}={Fore.GREEN} {_v.split('=')[1]}{Style.RESET_ALL}",
             _version_args)))
 
-    _processable_modules = set(_modules)
+    for _module in set(_modules):
+        _process_info[_module] = {"status": "WAITING"}
+
     if args.continue_module:
-        _start_module_name = args.continue_module[0]
-        _build_from_index = list(map(lambda _m: _m.name, _modules)).index(_start_module_name)
-        _modules = list(_modules[_build_from_index:])
+         _start_module_name = args.continue_module[0]
+         for _module in slice_modules(_modules, _start_module_name, True):
+             _process_info[_module] = {"status": "IDLE"}
+         _modules = slice_modules(_modules, _start_module_name, False)
 
-    for _module in _modules:
-        _process_info[_module] = {"status": "RUNNING"}
+    _retry_command = './project.py -bs ' + calc_retry_command_for_build(_modules, _process_info, _module_by_name)
+    _already_processed_modules = set()
+    _current_threads = {}
+    _modules_to_process = _modules.copy()
+    _errors = []
+    while len(set(_modules).difference(_already_processed_modules)) > 0 or len(_current_threads) > 0:
+        if len(_current_threads) < args.parallel and len(_errors) == 0:
 
-        _status = build_module(_module, _version_args)
-        _status2 = True
+            # Calculate independent modules to start processing
+            _removable_modules = set()
 
-        if not args.keep_changes:
-            # Usually restore .target file
-            _module.call_afterlocalbuildscripts()
+            # Recalculate modules to process
+            for _module in set(_modules).difference(_already_processed_modules):
+                _removable_modules = _removable_modules.union(set(
+                    descendants(calculate_graph(_modules), _module)))
 
-        if not _status:
-            raise SystemExit(f"\n{Fore.RED}Error when building {_module.name}. "
-                             f"\nTo retry, run {Fore.YELLOW}{_retry_command} -c {_module.name}{Style.RESET_ALL}")
-        _process_info[_module] = {"status": "OK"}
+            _modules_to_process = list(set(_modules).difference()
+                                   .difference(_current_threads.keys())
+                                   .difference(_already_processed_modules)
+                                   .difference(_removable_modules))
+
+            if len(_modules_to_process) > 0:
+                    _module = _modules_to_process.pop(0)
+                    _thread_obj = PropagatingThread(target=run_mvn_process, args=(),
+                                                   kwargs={ 'version_args': _version_args, 'module': _module })
+                    _thread_obj.start()
+                    _current_threads[_module] = _thread_obj
+                    _process_info[_module] = {"status": "RUNNING"}
+
+        _threads_to_remove = set([])
+        for _module, _thread_obj in _current_threads.items():
+            try:
+                _thread_obj.join(0.5)
+            except Exception as e:
+                traceback.print_exception(*sys.exc_info())
+                _threads_to_remove.add(_module)
+                _process_info[_module] = {"status": "ERROR"}
+                _errors.append(_module)
+                print(f"\n{Fore.RED}Error when building: " + ", ".join(map(lambda _m: _m.name, _errors)) + ". "                                                                                                              f"\nTo retry, run {Fore.YELLOW}{_retry_command} -c {_module.name}{Style.RESET_ALL}")
+                print(f"\nWaiting to finish other processing modules. Hit CTRL-C to force quit\n")
+
+            if not _thread_obj.is_alive():
+                if _module not in _errors:
+                    _process_info[_module] = {"status": "OK"}
+                _threads_to_remove.add(_module)
+
+        for _module in _threads_to_remove:
+            _already_processed_modules.add(_module)
+            del _current_threads[_module]
+
+        if len(_current_threads) == 0 and len(_errors) > 0:
+            time.sleep(10)
+            raise SystemExit(f"\n{Fore.RED}Error when building: " + ", ".join(map(lambda _m: _m.name, _errors)) + ". "
+                     f"\nTo retry, run {Fore.YELLOW}{_retry_command} -c {_module.name}{Style.RESET_ALL}")
+
 
 
 def check_release_modules_for_error(_modules):
@@ -1322,7 +1499,6 @@ def check_release_modules_for_error(_modules):
             _error = True
 
     return _error
-
 
 def build_continuous(_modules, _process_info, _module_by_name, _release_build=False):
     print(f"\n{Fore.YELLOW}Continuous build for modules :\n" + (
@@ -1441,7 +1617,7 @@ def build_continuous(_modules, _process_info, _module_by_name, _release_build=Fa
 
             for _new_module in _new_modules_to_process.union(_active_processes):
                 _removable_modules = _removable_modules.union(set(
-                    ancestors(calculate_graph(_modules), _new_module)))
+                    descendants(calculate_graph(_modules), _new_module)))
 
             _new_modules_to_process = _new_modules_to_process.union(_active_processes)
             _active_processes = _new_modules_to_process.difference(_removable_modules)
@@ -1464,7 +1640,7 @@ def server_start(_modules, _process_info):
     global process_info_server_pid
     process_info_server = start_process_info_server(_modules, _process_info)
     process_info_server_pid = threading.Thread(None, target=process_info_server.run)
-    process_info_server_pid.setDaemon(True)
+    process_info_server_pid.daemon = True
     process_info_server_pid.start()
 
 
@@ -1479,6 +1655,29 @@ def server_shutdown():
     if process_info_server_pid is not None:
         process_info_server_pid.join()
     print(f"{Fore.YELLOW}Stop server\n{Style.RESET_ALL}")
+
+
+def checkout_with_progressbar(*args, **kwargs):
+    _module = kwargs['module']
+    _pbar = kwargs['progress']
+
+    _submodule_repo = _module.repo()
+    #print(f"{Fore.YELLOW}Checkout submodule {Fore.GREEN}{module.branch} {Fore.YELLOW} in "
+    #      f"{Fore.GREEN}{submodule_repo.git_dir}")
+    if _module.check_dirty():
+        print(f"{Fore.YELLOW} {_module.name} Submodule is in dirty state, stashing")
+        _module.repo().git.stash(["-u", "-m \"[AUTO STASH]\""])
+
+    if not os.path.exists(_module.path):
+        # print(f"{Fore.YELLOW}Update submodule {Fore.GREEN}{_module.name}{Style.RESET_ALL}")
+        repo.submodule(_module.path).update(init=True, to_latest_revision=True, force=True)
+
+    # print(f"{Fore.YELLOW}Set branch {Fore.GREEN}{_module.branch}{Fore.YELLOW} for {Fore.GREEN}{_module.name}
+    # {Style.RESET_ALL}")
+    _module.checkout_branch()
+    _module.checkout_tags()
+    _pbar.update(1)
+    return
 
 
 # ============================== Mandatory module init
@@ -1500,28 +1699,37 @@ print_dependency_graph_ascii(processable_modules)
 if args.git_checkout or args.release_build:
     currentDir = os.getcwd()
     repo = git.Repo(currentDir)
-    # for _submodule in repo.submodules:
-    #    print(f"{Fore.YELLOW}Update submodule {Fore.GREEN}{_submodule.name}{Style.RESET_ALL}")
-    #    _submodule.update(init=True)
-    modules_to_check = tqdm(processable_modules)
-    for module in modules_to_check:
-        if not module.virtual:
-            submodule_repo = module.repo()
-            modules_to_check.set_description(module.name)
-            print(f"{Fore.YELLOW}Checkout submodule {Fore.GREEN}{module.branch} {Fore.YELLOW} in "
-                  f"{Fore.GREEN}{submodule_repo.git_dir}")
-            if module.check_dirty():
-                print(f"{Fore.YELLOW} - Submodule is in dirty state, stashing")
-                module.repo().git.stash(["-u", "-m \"[AUTO STASH]\""])
+    _processable_modules = processable_modules.copy()
+    _current_threads = {}
+    print("\n")
+    with tqdm(total=len(_processable_modules), colour="green", bar_format='{desc:<60}{percentage:3.0f}%|{bar}{r_bar}') as _pbar:
+        while len(_processable_modules) > 0 or len(_current_threads) > 0:
+            if len(_current_threads) < args.parallel and len(_processable_modules) > 0:
+                _module = _processable_modules.pop(0)
+                if not _module.virtual:
+                    _thread_obj = PropagatingThread(target=checkout_with_progressbar, args=(),
+                                                    kwargs={ 'progress': _pbar, 'module': _module })
+                    _thread_obj.start()
+                    _current_threads[_module] = _thread_obj
+                    _pbar.set_description(f", ".join(map(lambda _m: f"{Fore.YELLOW}{_m.name}{Fore.GREEN}({_m.branch})",
+                                                         _current_threads.keys())), refresh=True)
+            _threads_to_remove = []
+            for _module, _thread_obj in _current_threads.items():
+                try:
+                    _thread_obj.join(0.1)
+                except Exception as e:
+                    traceback.print_exception(*sys.exc_info())
+                    _threads_to_remove.append(_module)
+                    raise SystemExit(f"\n{Fore.RED}Error when fetching {_module.name}. ")
 
-            if not os.path.exists(module.path):
-                print(f"{Fore.YELLOW}Update submodule {Fore.GREEN}{module.name}{Style.RESET_ALL}")
-                repo.submodule(module.path).update(init=True, to_latest_revision=True, force=True)
+                if not _thread_obj.is_alive():
+                    _threads_to_remove.append(_module)
 
-            # print(f"{Fore.YELLOW}Set branch {Fore.GREEN}{_module.branch}{Fore.YELLOW} for {Fore.GREEN}{_module.name}
-            # {Style.RESET_ALL}")
-            module.checkout_branch()
-            module.checkout_tags()
+            for _module in _threads_to_remove:
+                del _current_threads[_module];
+
+            _pbar.set_description(f", ".join(map(lambda _m: f"{Fore.YELLOW}{_m.name}{Fore.GREEN}({_m.branch})",
+                                                 _current_threads.keys())), refresh=True)
 
 pending_changes = check_module_depenencies(modules, module_by_name, _fix_dependencies=args.fix_dependencies)
 if not args.dirty and pending_changes:
@@ -1669,7 +1877,7 @@ if args.relnotes:
                     if f"{tag}" == to_tag or f"{tag}" == f"v{to_tag}":
                         to_sha = short_sha
 
-                # Local tag chackout
+                # Local tag checkout
                 # module.checkout_tags()
                 # for tagref in module.repo().tags:
                 #     short_sha = module.repo().git.rev_parse(tagref.commit, short=True)
